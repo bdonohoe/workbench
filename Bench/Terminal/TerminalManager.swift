@@ -76,6 +76,9 @@ final class TerminalSession: TerminalSurfaceDelegate {
     }
     /// The machine this tab is logged in to over ssh, if any.
     var remoteHost: String?
+    /// An interactive Claude Code is the terminal's foreground program,
+    /// even one started by hand, which Bench's hooks don't report on.
+    var claudeInFront = false
     /// What Claude's hooks last reported. nil in shell tabs, and until Claude
     /// reports something.
     private(set) var claudeState: AgentState?
@@ -504,10 +507,12 @@ final class TerminalManager {
             }
             usageReader.keep(paths: Set(sessions.keys.compactMap { all[$0]?.transcriptPath ?? AgentSessions.transcriptPath(tabID: $0) }))
         }
-        remoteScanner = RemoteSessionScanner(hasTabs: { [weak self] in !(self?.sessions.isEmpty ?? true) }) { [weak self] hosts in
+        remoteScanner = RemoteSessionScanner(hasTabs: { [weak self] in !(self?.sessions.isEmpty ?? true) }) { [weak self] hosts, claudeTabs in
             guard let self else { return }
-            for (id, session) in sessions where session.remoteHost != hosts[id] {
-                session.remoteHost = hosts[id]
+            for (id, session) in sessions {
+                if session.remoteHost != hosts[id] { session.remoteHost = hosts[id] }
+                let inFront = claudeTabs.contains(id)
+                if session.claudeInFront != inFront { session.claudeInFront = inFront }
             }
         }
         // Coming back to the app counts as seeing the tab that's on screen.
@@ -1040,8 +1045,15 @@ final class TerminalManager {
         if let prompt = startupPrompt(tabID: tabID) {
             return "\(words(tabID).product) \(prompt.blocker). Answer that first."
         }
-        guard agentIsUp(session, tabID: tabID) else {
-            if isStartingClaude(tabID: tabID) {
+        // Claude restarted by hand in this tab (`claude --continue`) has no
+        // hooks, but its message box on screen says typing is safe.
+        guard agentIsUp(session, tabID: tabID)
+                || Self.canTypeWithoutHooks(claudeInFront: session.claudeInFront, screen: session.view.visibleText(),
+                                         driver: session.agent?.driver) else {
+            // The shell is running `claude`, but its hooks haven't reported
+            // in: it's still starting, or stuck on a question only its own
+            // terminal can answer, like trusting a new folder.
+            if isStartingClaude(tabID: tabID) || session.claudeInFront {
                 return here
                     ? "\(words(tabID).name) is starting, or waiting on a question in its terminal. Show the terminal to answer it."
                     : "\(words(tabID).name) is starting, or waiting on a question in its terminal (like whether to trust a new folder). Open the tab on that Mac to answer it."
@@ -1057,6 +1069,14 @@ final class TerminalManager {
                     : "\(words(tabID).name) is asking you a question on the Mac. Answer it there first."
         }
         return nil
+    }
+
+    /// Whether a Claude with no hooks can take a message. Nothing reports
+    /// its questions, and Return on one would answer it, so this needs
+    /// its message box on screen and not a numbered choice.
+    nonisolated static func canTypeWithoutHooks(claudeInFront: Bool, screen: String?, driver: (any AgentTerminalDriver)?) -> Bool {
+        guard claudeInFront, let box = driver?.messageBox(in: screen) else { return false }
+        return box.range(of: #"^\d+\.\s"#, options: .regularExpression) == nil
     }
 
     /// Types a message from the phone into a Claude tab and sends it.
