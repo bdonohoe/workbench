@@ -216,7 +216,7 @@ final class FeedbackAgent {
             return (false, "This isn't a worktree Workbench started for feedback, so it won't be thrown away.")
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            Task { await self?.remove(worktree) }
+            Task { [weak self] in await self?.remove(worktree) }
         }
         return (true, "Workbench will throw this worktree and its branch away in a few seconds.")
     }

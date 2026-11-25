@@ -137,7 +137,7 @@ actor AudioCapture {
         stopListeningForRateChanges()
         var address = AudioInputDevices.nominalSampleRateAddress
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
-            Task { await self?.sampleRateChanged() }
+            Task { [weak self] in await self?.sampleRateChanged() }
         }
         guard AudioObjectAddPropertyListenerBlock(device, &address, listenerQueue, block) == noErr else { return }
         rateListener = (device, block)
