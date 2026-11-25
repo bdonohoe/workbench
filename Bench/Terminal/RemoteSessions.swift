@@ -57,6 +57,8 @@ nonisolated struct TerminalSnapshot {
     struct Process {
         var tty: Substring
         var arguments: [String]
+        /// In its terminal's foreground, so it's what typing reaches.
+        var isForeground = false
     }
     var tabForTTY: [Substring: UUID] = [:]
     var processes: [pid_t: Process] = [:]
@@ -64,7 +66,7 @@ nonisolated struct TerminalSnapshot {
     static func capture() -> TerminalSnapshot {
         let process = Foundation.Process()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-axww", "-o", "pid=,tty=,args="]
+        process.arguments = ["-axww", "-o", "pid=,tty=,stat=,args="]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
@@ -74,16 +76,16 @@ nonisolated struct TerminalSnapshot {
         return parse(String(decoding: data, as: UTF8.self))
     }
 
-    /// Parses `ps -o pid=,tty=,args=` output.
+    /// Parses `ps -o pid=,tty=,stat=,args=` output.
     static func parse(_ output: String) -> TerminalSnapshot {
         var snapshot = TerminalSnapshot()
         for line in output.split(separator: "\n") {
             let words = line.split(separator: " ", omittingEmptySubsequences: true)
-            guard words.count >= 3, let pid = pid_t(words[0]), words[1] != "??" else { continue }
+            guard words.count >= 4, let pid = pid_t(words[0]), words[1] != "??" else { continue }
             let tty = words[1]
-            let arguments = words.dropFirst(2).map(String.init)
-            snapshot.processes[pid] = Process(tty: tty, arguments: arguments)
-            let program = words[2].split(separator: "/").last ?? words[2]
+            let arguments = words.dropFirst(3).map(String.init)
+            snapshot.processes[pid] = Process(tty: tty, arguments: arguments, isForeground: words[2].contains("+"))
+            let program = words[3].split(separator: "/").last ?? words[3]
             if program == "login", let range = line.range(of: RemoteSessionScanner.marker),
                let uuid = UUID(uuidString: String(line[range.upperBound...].prefix(36))) {
                 snapshot.tabForTTY[tty] = uuid
@@ -94,6 +96,23 @@ nonisolated struct TerminalSnapshot {
 
     func tab(of pid: pid_t) -> UUID? {
         processes[pid].flatMap { tabForTTY[$0.tty] }
+    }
+
+    /// Tabs with an interactive Claude Code in front, whether or not Bench
+    /// started it. One run by hand has none of Bench's hooks, so this is
+    /// the only way to know it's there.
+    var tabsWithClaudeInFront: Set<UUID> {
+        Set(processes.compactMap { pid, process in
+            process.isForeground && Self.isInteractiveClaude(process.arguments) ? tab(of: pid) : nil
+        })
+    }
+
+    /// `claude`, or `node …/claude`, and not a one-shot `claude -p`.
+    static func isInteractiveClaude(_ arguments: [String]) -> Bool {
+        guard let first = arguments.first?.split(separator: "/").last else { return false }
+        let isClaude = first == "claude"
+            || (first == "node" && arguments.dropFirst().first?.split(separator: "/").last == "claude")
+        return isClaude && !arguments.contains("-p") && !arguments.contains("--print")
     }
 }
 
@@ -107,7 +126,7 @@ nonisolated struct TerminalSnapshot {
 final class RemoteSessionScanner {
     private var timer: Timer?
     private var scanning = false
-    private let onChange: ([UUID: String]) -> Void
+    private let onChange: ([UUID: String], Set<UUID>) -> Void
     /// Whether there's any tab to look for. With none, there's no point
     /// listing every process on the Mac every few seconds.
     private let hasTabs: () -> Bool
@@ -127,8 +146,9 @@ final class RemoteSessionScanner {
         return ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
     }()
 
-    /// Called with each remote tab's host name.
-    init(hasTabs: @escaping () -> Bool = { true }, onChange: @escaping ([UUID: String]) -> Void) {
+    /// Called with each remote tab's host name, and the tabs with Claude
+    /// Code in front.
+    init(hasTabs: @escaping () -> Bool = { true }, onChange: @escaping ([UUID: String], Set<UUID>) -> Void) {
         self.hasTabs = hasTabs
         self.onChange = onChange
         timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
@@ -141,17 +161,15 @@ final class RemoteSessionScanner {
         guard !scanning, hasTabs() else { return }
         scanning = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let hosts = Self.findSessions()
+            let snapshot = TerminalSnapshot.capture()
+            let hosts = Self.sessions(in: snapshot)
+            let claudeTabs = snapshot.tabsWithClaudeInFront
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.scanning = false
-                self.onChange(hosts)
+                self.onChange(hosts, claudeTabs)
             }
         }
-    }
-
-    private nonisolated static func findSessions() -> [UUID: String] {
-        sessions(in: TerminalSnapshot.capture())
     }
 
     /// Tab IDs and their ssh hosts.
