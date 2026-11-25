@@ -2207,7 +2207,7 @@ private struct ModePill: View {
 
     var body: some View {
         Menu {
-            Picker("Mode", selection: Binding(get: { shown }, set: choose)) {
+            Picker("Mode", selection: Binding(get: { shown }, set: { choose($0) })) {
                 ForEach(PermissionMode.offered, id: \.self) { option in
                     // Two lines of text: the name, and what it does under it.
                     Label {
