@@ -210,19 +210,14 @@ public struct LayerMotion: NSViewRepresentable {
                 case .addLineToPoint:
                     line(to: points[0])
                 case .addQuadCurveToPoint:
-                    let (from, control, to) = (current, points[0], points[1])
+                    let from = current
                     for step in 1...24 {
-                        let t = CGFloat(step) / 24, u = 1 - t
-                        line(to: CGPoint(x: u * u * from.x + 2 * u * t * control.x + t * t * to.x,
-                                         y: u * u * from.y + 2 * u * t * control.y + t * t * to.y))
+                        line(to: quadPoint(from, points[0], points[1], at: CGFloat(step) / 24))
                     }
                 case .addCurveToPoint:
-                    let (from, c1, c2, to) = (current, points[0], points[1], points[2])
+                    let from = current
                     for step in 1...24 {
-                        let t = CGFloat(step) / 24, u = 1 - t
-                        let (a, b, c, d) = (u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t)
-                        line(to: CGPoint(x: a * from.x + b * c1.x + c * c2.x + d * to.x,
-                                         y: a * from.y + b * c1.y + c * c2.y + d * to.y))
+                        line(to: cubicPoint(from, points[0], points[1], points[2], at: CGFloat(step) / 24))
                     }
                 case .closeSubpath:
                     line(to: start)
@@ -231,6 +226,33 @@ public struct LayerMotion: NSViewRepresentable {
                 }
             }
             return total
+        }
+
+        // The curve math is spelled out a term at a time, with its types
+        // written down: as one expression it's more than older compilers
+        // can type-check in the time they allow.
+
+        /// A point on a quadratic curve, `t` of the way along.
+        private static func quadPoint(_ from: CGPoint, _ control: CGPoint, _ to: CGPoint, at t: CGFloat) -> CGPoint {
+            let u: CGFloat = 1 - t
+            let a: CGFloat = u * u
+            let b: CGFloat = 2 * u * t
+            let c: CGFloat = t * t
+            let x: CGFloat = a * from.x + b * control.x + c * to.x
+            let y: CGFloat = a * from.y + b * control.y + c * to.y
+            return CGPoint(x: x, y: y)
+        }
+
+        /// A point on a cubic curve, `t` of the way along.
+        private static func cubicPoint(_ from: CGPoint, _ c1: CGPoint, _ c2: CGPoint, _ to: CGPoint, at t: CGFloat) -> CGPoint {
+            let u: CGFloat = 1 - t
+            let a: CGFloat = u * u * u
+            let b: CGFloat = 3 * u * u * t
+            let c: CGFloat = 3 * u * t * t
+            let d: CGFloat = t * t * t
+            let x: CGFloat = a * from.x + b * c1.x + c * c2.x + d * to.x
+            let y: CGFloat = a * from.y + b * c1.y + c * c2.y + d * to.y
+            return CGPoint(x: x, y: y)
         }
 
         private struct Sparkle { var x: Double, y: Double, size: Double, phase: Double, speed: Double }

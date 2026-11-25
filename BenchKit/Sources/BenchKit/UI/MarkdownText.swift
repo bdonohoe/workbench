@@ -247,10 +247,14 @@ public struct MarkdownText: View {
     /// Where the links are, in UTF-16 offsets, which is how a text layout
     /// counts its characters.
     static func linkRanges(in text: AttributedString) -> [Range<Int>] {
-        text.runs.filter { $0.link != nil }.map { run in
-            let start = text.utf16.distance(from: text.startIndex, to: run.range.lowerBound)
-            return start..<(start + text.utf16.distance(from: run.range.lowerBound, to: run.range.upperBound))
+        var ranges: [Range<Int>] = []
+        var start = 0
+        for run in text.runs {
+            let end = start + text.utf16Length(of: run)
+            if run.link != nil { ranges.append(start..<end) }
+            start = end
         }
+        return ranges
     }
 
     // MARK: Parsing
@@ -538,6 +542,15 @@ struct CodeSpan: Equatable {
     var text: String
 }
 
+extension AttributedString {
+    /// How many UTF-16 units a run of this text takes. Runs come in order
+    /// and cover the whole text, so adding these up gives each run's
+    /// offset. (`utf16` would say directly, but needs macOS 26.)
+    fileprivate func utf16Length(of run: Runs.Run) -> Int {
+        String(self[run.range].characters).utf16.count
+    }
+}
+
 /// A parsed line with its code styled and made clickable.
 struct InlineStyle {
     /// Code spans are links to this scheme, with their index as the host,
@@ -550,9 +563,10 @@ struct InlineStyle {
 
     init(_ parsed: AttributedString, codeFont: Font?, codeColor: Color) {
         text = parsed
+        var start = 0
         for run in parsed.runs {
-            let start = parsed.utf16.distance(from: parsed.startIndex, to: run.range.lowerBound)
-            let range = start..<(start + parsed.utf16.distance(from: run.range.lowerBound, to: run.range.upperBound))
+            let range = start..<(start + parsed.utf16Length(of: run))
+            start = range.upperBound
             if run.link != nil {
                 links.append(range)
             } else if run.inlinePresentationIntent?.contains(.code) == true {
