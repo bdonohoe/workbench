@@ -839,25 +839,50 @@ private struct TabButton: View {
         return mine.id == store.claudeAccountID(for: projectID) ? nil : mine
     }
 
+    // The chip's pieces are worked out one at a time, each with its type
+    // written down: all in one call they're more than older compilers can
+    // type-check in the time they allow.
+
+    private var symbol: String {
+        if session?.remoteHost != nil { return "network" }
+        return tab.diff?.isImage == true ? "photo" : tab.symbol
+    }
+
+    private var tint: Color {
+        session?.remoteHost != nil ? ActivityBackground.remote : iconColor
+    }
+
+    private var help: String {
+        if tab.isPreview {
+            return "Preview: the next file you click replaces it. Right-click to keep it open."
+        }
+        if let host = session?.remoteHost { return "Logged in to \(host)" }
+        return session?.terminalTitle ?? tab.diff?.path ?? tab.filePath ?? tab.displayTitle
+    }
+
+    private var rename: TabChipRename? {
+        guard store.renamingTabID == tab.id else { return nil }
+        return TabChipRename(placeholder: tab.title, name: tab.displayTitle) { name in
+            guard store.renamingTabID == tab.id else { return }
+            if let name { store.renameTab(tab.id, in: projectID, to: name) }
+            store.renamingTabID = nil
+        }
+    }
+
     var body: some View {
         TabChip(
-            symbol: session?.remoteHost != nil ? "network" : tab.diff?.isImage == true ? "photo" : tab.symbol,
-            tint: session?.remoteHost != nil ? ActivityBackground.remote : iconColor,
+            symbol: symbol,
+            tint: tint,
             // Just what the tab is ("Claude", a file name). The terminal
             // title, with what Claude is working on, is in the tooltip.
             title: tab.displayTitle,
             isSelected: isSelected,
             showsClose: showsClose,
-            help: tab.isPreview ? "Preview: the next file you click replaces it. Right-click to keep it open."
-                : session?.remoteHost.map { "Logged in to \($0)" } ?? session?.terminalTitle ?? tab.diff?.path ?? tab.filePath ?? tab.displayTitle,
+            help: help,
             activity: session?.activity ?? .idle,
             isPreview: tab.isPreview,
             embedded: embedded,
-            rename: store.renamingTabID == tab.id ? TabChipRename(placeholder: tab.title, name: tab.displayTitle) { name in
-                guard store.renamingTabID == tab.id else { return }
-                if let name { store.renameTab(tab.id, in: projectID, to: name) }
-                store.renamingTabID = nil
-            } : nil,
+            rename: rename,
             select: select,
             close: close
         ) {
