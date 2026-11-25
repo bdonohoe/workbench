@@ -702,7 +702,7 @@ struct CopiedBubble: View {
             .padding(.horizontal, 7)
             .frame(height: Self.height)
             #if os(macOS)
-            .glassEffect(.regular, in: Capsule())
+            .benchGlass(in: Capsule())
             #else
             .background(Capsule().fill(palette.surface).shadow(color: .black.opacity(0.12), radius: 3, y: 1))
             .overlay(Capsule().strokeBorder(palette.hairline))

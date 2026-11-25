@@ -67,10 +67,10 @@ struct SidebarView: View {
             }
             .frame(maxHeight: .infinity)
             // Rows fade as they slide under the meters.
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .benchSoftScrollEdge(.bottom)
             // The list runs on under the cards and meters at the bottom,
             // which float on it as glass.
-            .safeAreaBar(edge: .bottom, spacing: 0) {
+            .benchSafeAreaBar(edge: .bottom, spacing: 0) {
                 VStack(spacing: 0) {
                     #if DEBUG
                     RemoteScreenshotHooks()

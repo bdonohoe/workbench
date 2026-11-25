@@ -20,6 +20,10 @@ make run       # builds and launches
 
 Requires Xcode 27 and xcodegen (`brew install xcodegen`).
 
+Workbench runs on macOS 15 or later. Liquid Glass and dictation's
+technical-terms cleanup need macOS 26; on macOS 15 the glass is a frosted
+material and that cleanup step is skipped.
+
 To sign with your own Apple developer team, copy
 `Config/Local.xcconfig.example` to `Config/Local.xcconfig` and fill it in.
 That file is gitignored. With no team, the Mac app is signed to run on your

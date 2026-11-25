@@ -32,7 +32,7 @@ public enum ChatMotion {
 
     /// The same for a glass bar, which can't fade (the conversation shows
     /// through glass until a fade lands): it grows a little from its
-    /// bottom edge. Put the bar in its own `GlassEffectContainer` so the
+    /// bottom edge. Put the bar in its own `BenchGlassContainer` so the
     /// glass and what's on it grow as one piece.
     public static var glassCard: AnyTransition {
         .modifier(active: Growing(progress: 0, from: 0.97, anchor: .bottom),

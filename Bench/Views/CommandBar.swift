@@ -114,8 +114,8 @@ private struct CommandBarView: View {
         }
         // Glass, like Spotlight, frosted toward the window's color so the
         // results stay easy to read over busy text.
-        .glassEffect(.regular.tint(Color(nsColor: .windowBackgroundColor).opacity(0.55)),
-                     in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 20, style: .continuous),
+                    tint: Color(nsColor: .windowBackgroundColor).opacity(0.55))
         .onChange(of: query) { _, _ in selectedID = nil }
     }
 

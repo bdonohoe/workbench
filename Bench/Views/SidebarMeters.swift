@@ -111,8 +111,8 @@ struct SidebarMeters: View {
         .padding(.horizontal, 6)
         // Glass, floating over the end of the project list, frosted toward
         // the sidebar's color so the rings stay readable over rows.
-        .glassEffect(.regular.tint(Color(nsColor: .windowBackgroundColor).opacity(0.75)).interactive(),
-                     in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous),
+                    tint: Color(nsColor: .windowBackgroundColor).opacity(0.75), interactive: true)
         .contentShape(Rectangle())
         .onTapGesture {
             showsCard.toggle()

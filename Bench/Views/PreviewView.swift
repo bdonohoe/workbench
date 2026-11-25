@@ -13,27 +13,25 @@ final class PreviewPages {
         var count: Int
     }
 
-    private var pages: [UUID: WebPage] = [:]
+    private var pages: [UUID: BrowserPage] = [:]
     private var zooms: [UUID: Double] = [:]
     private(set) var addressFocus: AddressFocus?
     /// Opens a page a link asked for in a tab of its own, after the tab
     /// the link was in. Set at launch.
     @ObservationIgnored var openInNewTab: ((URL, UUID) -> Void)?
 
-    func page(for tabID: UUID, url: URL?) -> WebPage {
+    func page(for tabID: UUID, url: URL?) -> BrowserPage {
         if let page = pages[tabID] { return page }
-        let page = WebPage(navigationDecider: BrowserNavigation { [weak self] url in
+        let page = BrowserPage { [weak self] url in
             self?.openInNewTab?(url, tabID)
-        })
-        // Inspect Element in the page's menu: these are often dev servers.
-        page.isInspectable = true
-        if let url { page.load(URLRequest(url: url)) }
+        }
+        if let url { page.load(url) }
         pages[tabID] = page
         return page
     }
 
     /// A tab's page, if the tab has been on screen to make one.
-    func existing(_ tabID: UUID) -> WebPage? { pages[tabID] }
+    func existing(_ tabID: UUID) -> BrowserPage? { pages[tabID] }
 
     /// The address a tab's page is on now, after any links followed.
     func currentURL(for tabID: UUID) -> URL? { pages[tabID]?.url }
@@ -79,53 +77,166 @@ final class PreviewPages {
     func applyZoom(_ tabID: UUID) {
         guard let page = pages[tabID], page.url != nil else { return }
         let level = zoom(of: tabID)
-        Task {
-            _ = try? await page.callJavaScript("document.documentElement.style.zoom = level",
-                                               arguments: ["level": level == 1 ? "" : String(level)])
-        }
+        page.run("document.documentElement.style.zoom = level", arguments: ["level": level == 1 ? "" : String(level)])
     }
 }
 
-extension WebPage {
-    var canGoBack: Bool { !backForwardList.backList.isEmpty }
-    var canGoForward: Bool { !backForwardList.forwardList.isEmpty }
-
-    func goBack() {
-        if let item = backForwardList.backList.last { load(item) }
-    }
-
-    func goForward() {
-        if let item = backForwardList.forwardList.first { load(item) }
-    }
-}
-
-/// Where a browser tab's links go: pages stay in the tab, a link that
-/// asks for a new window gets a new tab, and anything that isn't a web
-/// page (mail, another app's links) goes to the app that handles it.
-private struct BrowserNavigation: WebPage.NavigationDeciding {
+/// One browser tab's page: a web view, and what the tab's header shows
+/// about it. WebKit's own `WebPage` does this from macOS 26; Workbench
+/// runs on macOS 15 too, so this is built on `WKWebView`, which both have.
+@Observable
+final class BrowserPage: NSObject, WKNavigationDelegate {
     private static let pageSchemes: Set<String> = ["http", "https", "file", "about", "blob", "data", "javascript"]
-    let openInNewTab: (URL) -> Void
 
-    mutating func decidePolicy(for action: WebPage.NavigationAction,
-                               preferences: inout WebPage.NavigationPreferences) async -> WKNavigationActionPolicy {
-        guard let url = action.request.url else { return .allow }
+    @ObservationIgnored let webView: WKWebView
+    private(set) var url: URL?
+    private(set) var title = ""
+    private(set) var isLoading = false
+    private(set) var estimatedProgress = 0.0
+    private(set) var hasOnlySecureContent = false
+    private(set) var canGoBack = false
+    private(set) var canGoForward = false
+
+    @ObservationIgnored private let openInNewTab: (URL) -> Void
+    @ObservationIgnored private var observations: [NSKeyValueObservation] = []
+    /// The page last asked for by `load`, and who to tell if it fails.
+    @ObservationIgnored private var requested: (navigation: WKNavigation, failed: (Error) -> Void)?
+
+    init(openInNewTab: @escaping (URL) -> Void) {
+        self.openInNewTab = openInNewTab
+        webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        super.init()
+        webView.navigationDelegate = self
+        webView.allowsBackForwardNavigationGestures = true
+        // Inspect Element in the page's menu: these are often dev servers.
+        webView.isInspectable = true
+        watch(\.url)
+        watch(\.title)
+        watch(\.isLoading)
+        watch(\.estimatedProgress)
+        watch(\.hasOnlySecureContent)
+        watch(\.canGoBack)
+        watch(\.canGoForward)
+    }
+
+    /// Copies the web view's state over whenever this part of it changes.
+    private func watch<Value>(_ keyPath: KeyPath<WKWebView, Value>) {
+        observations.append(webView.observe(keyPath) { [weak self] _, _ in
+            // WebKit changes these on the main thread.
+            MainActor.assumeIsolated { self?.sync() }
+        })
+    }
+
+    /// Only what changed is written, so views watching one value aren't
+    /// redrawn for another.
+    private func sync() {
+        if url != webView.url { url = webView.url }
+        let newTitle = webView.title ?? ""
+        if title != newTitle { title = newTitle }
+        if isLoading != webView.isLoading { isLoading = webView.isLoading }
+        if estimatedProgress != webView.estimatedProgress { estimatedProgress = webView.estimatedProgress }
+        if hasOnlySecureContent != webView.hasOnlySecureContent { hasOnlySecureContent = webView.hasOnlySecureContent }
+        if canGoBack != webView.canGoBack { canGoBack = webView.canGoBack }
+        if canGoForward != webView.canGoForward { canGoForward = webView.canGoForward }
+    }
+
+    /// Goes to an address. `failed` hears about it if the page doesn't
+    /// open, unless another `load` has replaced this one by then.
+    func load(_ url: URL, failed: @escaping (Error) -> Void = { _ in }) {
+        requested = nil
+        guard let navigation = webView.load(URLRequest(url: url)) else { return }
+        requested = (navigation, failed)
+    }
+
+    func goBack() { webView.goBack() }
+    func goForward() { webView.goForward() }
+    func reload() { webView.reload() }
+    func stopLoading() { webView.stopLoading() }
+
+    /// Runs a script in the page, as the body of a function taking
+    /// `arguments`. Its result and any error are dropped.
+    func run(_ script: String, arguments: [String: Any] = [:]) {
+        webView.callAsyncJavaScript(script, arguments: arguments, in: nil, in: .page, completionHandler: nil)
+    }
+
+    /// Selects the next (or previous) place the text appears on the page,
+    /// wrapping at the ends. Answers whether it appears at all.
+    func find(_ text: String, backwards: Bool = false) async -> Bool {
+        guard !text.isEmpty else { return false }
+        let configuration = WKFindConfiguration()
+        configuration.backwards = backwards
+        configuration.wraps = true
+        return (try? await webView.find(text, configuration: configuration).matchFound) ?? false
+    }
+
+    // MARK: WKNavigationDelegate
+
+    /// Where a browser tab's links go: pages stay in the tab, a link that
+    /// asks for a new window gets a new tab, and anything that isn't a web
+    /// page (mail, another app's links) goes to the app that handles it.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard let url = navigationAction.request.url else { return .allow }
         if let scheme = url.scheme?.lowercased(), !Self.pageSchemes.contains(scheme) {
             NSWorkspace.shared.open(url)
             return .cancel
         }
         // No frame to load into: target="_blank", or a script's window.open.
-        if action.target == nil {
+        if navigationAction.targetFrame == nil {
             openInNewTab(url)
             return .cancel
         }
         return .allow
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if requested?.navigation === navigation { requested = nil }
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        fail(navigation, error)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        fail(navigation, error)
+    }
+
+    private func fail(_ navigation: WKNavigation?, _ error: Error) {
+        guard let requested, requested.navigation === navigation else { return }
+        self.requested = nil
+        requested.failed(error)
+    }
+}
+
+/// Shows a tab's web view. The view belongs to the page, not to this, so
+/// it's the same one (same scroll position, same history) each time the
+/// tab comes back on screen.
+private struct BrowserWebView: NSViewRepresentable {
+    let page: BrowserPage
+
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        attach(to: container)
+        return container
+    }
+
+    func updateNSView(_ container: NSView, context: Context) {
+        attach(to: container)
+    }
+
+    private func attach(to container: NSView) {
+        let webView = page.webView
+        guard webView.superview !== container else { return }
+        container.subviews.forEach { $0.removeFromSuperview() }
+        webView.frame = container.bounds
+        webView.autoresizingMask = [.width, .height]
+        container.addSubview(webView)
     }
 }
 
 /// A browser tab: one of Claude's published pages, a local dev server, or
 /// any site you type in.
 struct PreviewView: View {
-    let page: WebPage
+    let page: BrowserPage
     /// Where the tab started, for the Home button. nil for a tab opened
     /// empty, which has nowhere to go back to.
     let home: URL?
@@ -145,6 +256,10 @@ struct PreviewView: View {
     /// isn't taken for the latest.
     @State private var loads = 0
     @State private var finding = false
+    @State private var findText = ""
+    /// False once a search has come up empty, until the text changes.
+    @State private var findFound = true
+    @FocusState private var findFocused: Bool
     /// True while the address is a text field. At rest it's a label, so
     /// the field can't pick up the keys just by being the only one around.
     @State private var editingAddress = false
@@ -194,11 +309,56 @@ struct PreviewView: View {
             message(symbol: "globe", title: "Search or enter an address",
                     detail: "Type a site, a search, or just a port number for a server on this Mac.") { EmptyView() }
         } else {
-            WebView(page)
-                .webViewBackForwardNavigationGestures(.enabled)
-                .findNavigator(isPresented: $finding)
-                .replaceDisabled()
+            VStack(spacing: 0) {
+                if finding {
+                    findBar
+                    Divider()
+                }
+                BrowserWebView(page: page)
+            }
         }
+    }
+
+    /// Find on Page: Return for the next match, Shift-Return for the one
+    /// before, Escape to close.
+    private var findBar: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "magnifyingglass")
+                .font(.ui(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField("Find on page", text: $findText)
+                .textFieldStyle(.plain)
+                .font(.ui(size: 12))
+                .focused($findFocused)
+                .onSubmit { find(backwards: NSEvent.modifierFlags.contains(.shift)) }
+                .onExitCommand(perform: stopFinding)
+                .onChange(of: findText) { findFound = true }
+            if !findFound {
+                Text("Not found")
+                    .font(.ui(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            button("chevron.up", help: "Previous match (⇧↩)", disabled: findText.isEmpty) { find(backwards: true) }
+            button("chevron.down", help: "Next match (↩)", disabled: findText.isEmpty) { find(backwards: false) }
+            Button("Done", action: stopFinding)
+                .controlSize(.small)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .onAppear { findFocused = true }
+    }
+
+    private func find(backwards: Bool) {
+        let text = findText
+        Task {
+            let found = await page.find(text, backwards: backwards)
+            if text == findText { findFound = found }
+        }
+    }
+
+    private func stopFinding() {
+        finding = false
+        findFound = true
     }
 
     private func message(symbol: String, title: String, detail: String, @ViewBuilder action: () -> some View) -> some View {
@@ -314,7 +474,10 @@ struct PreviewView: View {
     /// ⌘F while the tab is on screen. Out of sight: the bar it opens is
     /// the control.
     private var findShortcut: some View {
-        Button("Find on Page") { finding = true }
+        Button("Find on Page") {
+            finding = true
+            findFocused = true
+        }
             .keyboardShortcut("f")
             .disabled(currentURL == nil || failure != nil)
             .opacity(0)
@@ -398,19 +561,13 @@ struct PreviewView: View {
         failure = nil
         loads += 1
         let load = loads
-        Task {
-            do {
-                for try await _ in page.load(URLRequest(url: url)) {}
-            } catch {
-                // Going somewhere else before this one finished isn't a failure.
-                var cause = error
-                if case WebPage.NavigationError.failedProvisionalNavigation(let underlying) = error { cause = underlying }
-                let code = (cause as NSError).code
-                guard load == loads, code != NSURLErrorCancelled, code != 102 else { return }
-                failure = (url, cause.localizedDescription)
-                destination = nil
-                if !editingAddress { address = shortAddress }
-            }
+        page.load(url) { error in
+            // Going somewhere else before this one finished isn't a failure.
+            let code = (error as NSError).code
+            guard load == loads, code != NSURLErrorCancelled, code != 102 else { return }
+            failure = (url, error.localizedDescription)
+            destination = nil
+            if !editingAddress { address = shortAddress }
         }
     }
 

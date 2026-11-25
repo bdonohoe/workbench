@@ -1,3 +1,4 @@
+import BenchKit
 import Observation
 import SwiftUI
 
@@ -65,7 +66,7 @@ private struct ToastView: View {
             .font(.ui(size: Theme.TypeScale.ui, weight: .medium))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .glassEffect(.regular, in: Capsule())
+            .benchGlass(in: Capsule())
             .accessibilityElement(children: .combine)
     }
 }

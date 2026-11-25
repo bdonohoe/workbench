@@ -4,7 +4,7 @@ import PackageDescription
 // Code shared by Bench on the Mac and the Bench companion on iPhone.
 let package = Package(
     name: "BenchKit",
-    platforms: [.macOS("26.0"), .iOS("26.0")],
+    platforms: [.macOS("15.0"), .iOS("26.0")],
     products: [
         .library(name: "BenchKit", targets: ["BenchKit"]),
     ],

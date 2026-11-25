@@ -51,9 +51,14 @@ nonisolated enum DictationCleanup {
     static let maxChunkWords = 700
     private static let timeout: Duration = .seconds(15)
 
-    /// Whether this Mac can run the technical-terms pass.
+    /// Whether this Mac can run the technical-terms pass. Never before
+    /// macOS 26, which has no on-device language model to ask.
     static var canFixTerms: Bool {
-        SystemLanguageModel.default.availability == .available
+        if #available(macOS 26, *) {
+            SystemLanguageModel.default.availability == .available
+        } else {
+            false
+        }
     }
 
     /// The whole cleanup, start to finish.
@@ -97,7 +102,8 @@ nonisolated enum DictationCleanup {
     /// One fresh single-turn session per chunk, raced against a timeout so
     /// a hung model call can't hold a dictation up for good.
     private static func respond(to chunk: String) async throws -> String {
-        try await withThrowingTaskGroup(of: String.self) { group in
+        guard #available(macOS 26, *) else { throw CleanupError.unavailable }
+        return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask {
                 let session = LanguageModelSession(instructions: instructions)
                 return try await session.respond(to: chunk, options: GenerationOptions(temperature: 0.1)).content
@@ -112,7 +118,7 @@ nonisolated enum DictationCleanup {
         }
     }
 
-    enum CleanupError: Error { case timedOut }
+    enum CleanupError: Error { case timedOut, unavailable }
 
     /// Splits text into chunks of at most `maxWords`, breaking only between
     /// sentences. One sentence longer than that becomes its own chunk.

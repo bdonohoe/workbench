@@ -335,7 +335,7 @@ private struct ChatBody: View {
         ZStack { conversation }
             .animation(Theme.Motion.hover, value: source.messages == nil || !turns.isLoaded)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaBar(edge: .bottom, spacing: 0) { dock }
+            .benchSafeAreaBar(edge: .bottom, spacing: 0) { dock }
         .environment(\.chatTimingID, source.timingID)
         .onChange(of: screenForTiming, initial: true) { _, screen in
             ChatTiming.note("chat showing", tab: source.timingID, details: "\(screen) messages=\(source.messages?.count ?? 0)")
@@ -435,7 +435,7 @@ private struct ChatBody: View {
                 .sticksToBottom(sentKey: turns.lastSentID)
                 // Text fades as it slides under the message box, and under
                 // the tab bar at the top.
-                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .benchSoftScrollEdge(.bottom)
                 .softTopEdge(surface: palette.canvas)
             }
             .transition(.opacity)
@@ -510,7 +510,7 @@ private struct ChatBody: View {
 
     private var dock: some View {
         // One container for the glass pieces, so they render together.
-        GlassEffectContainer(spacing: 4) {
+        BenchGlassContainer(spacing: 4) {
         VStack(spacing: 10) {
             if let session {
                 if session.isCompacting {
@@ -530,7 +530,7 @@ private struct ChatBody: View {
                 // comes up if starting goes on long enough to look stuck.
                 if !session.canReply, let reason = session.replyProblem, !session.isAllowOrDeny, session.questions == nil,
                    !session.isStarting || startsSlowly {
-                    GlassEffectContainer {
+                    BenchGlassContainer {
                     HStack(spacing: 6) {
                         Text(session.isStarting && source.showTerminal != nil
                              ? "\(session.agentTitle) is taking a while to start. It may be waiting on a question in its terminal."
@@ -547,7 +547,7 @@ private struct ChatBody: View {
                     // It floats over the conversation, so it gets glass to sit on.
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .glassEffect(.regular, in: Capsule())
+                    .benchGlass(in: Capsule())
                     .fixedSize(horizontal: false, vertical: true)
                     }
                     .transition(ChatMotion.glassCard)
@@ -555,12 +555,12 @@ private struct ChatBody: View {
                 // The right panel shows these too, so only while it's hidden.
                 if !store.showsChanges {
                     if let items = session.checklist, !items.isEmpty {
-                        GlassEffectContainer {
+                        BenchGlassContainer {
                             ChatChecklistBar(items: items, session: session, agents: session.pinnedAgents)
                         }
                         .transition(ChatMotion.glassCard)
                     } else if let agents = session.pinnedAgents {
-                        GlassEffectContainer {
+                        BenchGlassContainer {
                             ChatAgentsBar(agents: agents)
                         }
                         .transition(ChatMotion.glassCard)
@@ -711,7 +711,7 @@ struct ChatChecklistBar: View {
             .help(expanded ? "Hide the checklist" : "Show every step")
             .accessibilityLabel("Checklist, \(items.doneCount) of \(items.count) steps done")
         }
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
     }
 }
@@ -774,7 +774,7 @@ struct ChatAgentsBar: View {
             .help(expanded ? "Hide the agents" : "Show each agent")
             .accessibilityLabel(running.isEmpty ? "Agents done" : "\(running.count) agents working")
         }
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: ChatTypography.dockRadius, style: .continuous))
         .animation(.snappy(duration: 0.25), value: agents)
     }
@@ -1621,7 +1621,7 @@ private struct Composer: View {
                     .transition(.opacity)
             }
         }
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .animation(.easeOut(duration: 0.3), value: isStarting)
         .animation(.easeOut(duration: 0.5), value: showsStartingBeam)
         .overlay(alignment: .top) {
@@ -1631,7 +1631,7 @@ private struct Composer: View {
             if let row = modelPicker {
                 // Its own glass group, so the panel and what's in it grow
                 // as one piece.
-                GlassEffectContainer {
+                BenchGlassContainer {
                     ModelPicker(catalog: session.agentCatalog, current: session.model, highlighted: row, canSwitch: session.canRunCommand,
                                 effort: pickerEffort, pick: { chosenModel = $0 },
                                 pickEffort: { pickerEffort = $0; effortChanged = true },
@@ -1642,7 +1642,7 @@ private struct Composer: View {
                 .frame(height: 0, alignment: .bottom)
                 .offset(y: -8)
             } else if focused, let suggestions {
-                GlassEffectContainer {
+                BenchGlassContainer {
                     switch suggestions.list {
                     case .commands(let commands):
                         CommandSuggestions(commands: commands, highlighted: min(highlighted, commands.count - 1),
@@ -2355,7 +2355,7 @@ private struct ModelPicker: View {
         }
         .padding(5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     /// Effort, as five steps to click, like the dots in Claude Code's list.
@@ -2588,7 +2588,7 @@ private struct FileSuggestions: View {
         }
         .padding(5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -2654,7 +2654,7 @@ private struct CommandSuggestions: View {
         }
         .padding(5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .benchGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func tag(_ command: SlashCommand) -> String? {
@@ -2993,11 +2993,11 @@ enum ComposerRig {
                     .padding(.bottom, 12)
                 }
                 .sticksToBottom(sentKey: 0)
-                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .benchSoftScrollEdge(.bottom)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                GlassEffectContainer(spacing: 4) {
+            .benchSafeAreaBar(edge: .bottom, spacing: 0) {
+                BenchGlassContainer(spacing: 4) {
                     VStack(spacing: 10) {
                         Composer(session: session, draft: $draft, attachments: $attachments, send: {}, sendRightAway: {},
                                  interrupt: {}, switchModel: { _ in }, setEffort: { _ in }, runCommand: { _ in })

@@ -501,7 +501,7 @@ private struct ImageViewer: View {
                         .controlSize(.small)
                         .tint(.white)
                         .frame(width: 40, height: 40)
-                        .glassEffect(.regular, in: .circle)
+                        .benchGlass(in: .circle)
                         .transition(.opacity)
                         .accessibilityLabel("Loading the whole picture")
                 }
@@ -573,7 +573,7 @@ private struct ImageViewer: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.white.opacity(closeHovered ? 1 : 0.85))
                     .frame(width: 40, height: 40)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                    .benchGlass(in: .circle, interactive: true)
                     .scaleEffect(closeHovered && !reduceMotion ? 1.08 : 1)
             }
             .buttonStyle(.pressable)
@@ -589,7 +589,7 @@ private struct ImageViewer: View {
                 .foregroundStyle(.white.opacity(0.85))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .glassEffect(.regular, in: .capsule)
+                .benchGlass(in: .capsule)
                 .padding(.bottom, 20)
                 .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 6)))
                 .allowsHitTesting(false)

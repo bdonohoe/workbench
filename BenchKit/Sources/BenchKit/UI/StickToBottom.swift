@@ -143,7 +143,7 @@ struct StickToBottom<Key: Equatable>: ViewModifier {
                             .frame(width: 32, height: 32)
                             #if os(macOS)
                             // Glass on the Mac, floating with the message box.
-                            .glassEffect(.regular.interactive(), in: .circle)
+                            .benchGlass(in: .circle, interactive: true)
                             #else
                             .background(Circle().fill(palette.surface).shadow(color: .black.opacity(0.12), radius: 6, y: 2))
                             .overlay(Circle().strokeBorder(palette.hairline))
