@@ -1743,7 +1743,7 @@ private struct Composer: View {
         let pickerEffort = $pickerEffort
         let effortChanged = $effortChanged
         let history = $history
-        let accept: (SlashCommand, ComposerToken, Bool) -> Void = { accept($0, for: $1, sending: $2) }
+        let accept: (SlashCommand, ComposerToken, Bool) -> Void = { self.accept($0, for: $1, sending: $2) }
         let fill = fill
         let stopper = $stopper
         pasteMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [focused = $focused] event in
