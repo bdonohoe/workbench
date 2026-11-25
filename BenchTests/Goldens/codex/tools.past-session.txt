@@ -1,0 +1,4 @@
+id: rollout-tools
+agent: codex
+first prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the…
+last prompt: also say queued-ok afterwards

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- The ">" as one filled outline (a 96-wide stroke from 229,330 to 409,512 to 229,694 with round caps and join).
+       An open stroked polyline gets closed by the glass renderer, which drew a hairline between the two ends. -->
+  <path d="M263.128,296.247 L443.128,478.247 A48,48 0 0 1 443.128,545.753 L263.128,727.753 A48,48 0 0 1 194.872,660.247 L341.480,512 L194.872,363.753 A48,48 0 0 1 263.128,296.247 Z" fill="#EAF6F4"/>
+</svg>

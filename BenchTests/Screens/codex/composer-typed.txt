@@ -1,0 +1,40 @@
+
+  >_ OpenAI Codex (v0.172.0)
+     ~/Apps/Bench/build/codex-fixtures/cproj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+› hello there
+
+  GPT-6.2-Sol medium · ~/Apps/Bench/build/codex-fixtures/cproj
+                                                                                    ⚠ 3 warnings · f2 to view

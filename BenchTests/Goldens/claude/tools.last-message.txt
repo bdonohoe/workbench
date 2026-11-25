@@ -1,0 +1,12 @@
+start: Here's the summary. I switched `greet` in `hello.py` to an f-string, confirmed it still prints "Hello, world", and added a two-line `NOTES.md` describing the change. The folder contains 3 files, and the only `.md` files…
+
+whole:
+Here's the summary.
+
+I switched `greet` in `hello.py` to an f-string, confirmed it still prints "Hello, world", and added a two-line `NOTES.md` describing the change. The folder contains 3 files, and the only `.md` files are `README.md` and `NOTES.md`.
+
+- `hello.py`: `greet` now returns `f"Hello, {name}"`
+- `NOTES.md`: new file documenting the change
+- Expected failure: `ls nope-missing` returned "No such file or directory" (exit 1)
+
+Two notes on deviations: Grep and Glob are not available in this session, so I used `grep` and `find` through Bash for step 7. I didn't make a separate to-do tool list; the checklist is in chat instead.

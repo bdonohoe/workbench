@@ -1,0 +1,285 @@
+# Lanes for the iPhone app. The Mac app ships through Sparkle instead
+# (make publish), not the App Store.
+#
+# Credentials come from fastlane/.env (gitignored): ASC_KEY_ID,
+# ASC_ISSUER_ID and ASC_KEY_PATH, an App Store Connect API key.
+default_platform(:ios)
+
+platform :ios do
+  def api_key
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH")
+    )
+  end
+
+  # Also keeps coverage instrumentation out of the build, as the Makefile
+  # does for the Mac app: with it on, binaries write default.profraw on exit.
+  def auth_xcargs
+    "-allowProvisioningUpdates " \
+      "CLANG_COVERAGE_MAPPING=NO ENABLE_CODE_COVERAGE=NO " \
+      "-authenticationKeyPath #{File.expand_path(ENV.fetch('ASC_KEY_PATH'))} " \
+      "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')} " \
+      "-authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
+  end
+
+  # The project is generated from project.yml, so versions live there.
+  def phone_version
+    sh("cd .. && python3 scripts/version.py --phone get").split
+  end
+
+  def archive
+    sh("cd .. && xcodegen generate")
+    build_app(
+      project: "Bench.xcodeproj",
+      scheme: "BenchPhone",
+      destination: "generic/platform=iOS",
+      output_directory: "build/phone",
+      output_name: "Bench.ipa",
+      export_method: "app-store",
+      xcargs: auth_xcargs
+    )
+  end
+
+  desc "Archive and export the iPhone app without uploading or committing"
+  lane :build_only do
+    archive
+  end
+
+  desc "Build the iPhone app and upload it to TestFlight"
+  lane :beta do
+    key = api_key
+    latest = begin
+      latest_testflight_build_number(api_key: key, app_identifier: "me.birchtree.BenchPhone", initial_build_number: 0)
+    rescue StandardError => e
+      UI.user_error!("Couldn't read TestFlight builds (#{e.message}). Create the app in App Store Connect first.")
+    end
+    version, current = phone_version
+    build = [latest, current.to_i].max + 1
+
+    sh("cd .. && python3 scripts/version.py --phone set #{version} #{build}")
+    sh("cd .. && git add project.yml && git commit -q -m '#{version} build #{build}'")
+
+    archive
+    # Debug symbols to PostHog, so crash reports from this build are readable.
+    dsyms = File.join(lane_context[SharedValues::XCODEBUILD_ARCHIVE], "dSYMs")
+    sh("cd .. && scripts/upload-dsyms.sh #{dsyms.shellescape} me.birchtree.BenchPhone")
+
+    notes_file = File.join(__dir__, "whattotest.txt")
+    upload_to_testflight(
+      api_key: key,
+      ipa: "build/phone/Bench.ipa",
+      changelog: File.exist?(notes_file) ? File.read(notes_file).strip : nil,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Replace the What to Test notes on an uploaded build with whattotest.txt (fastlane notes build:39)"
+  lane :notes do |options|
+    UI.user_error!("Pass build:<number>") unless options[:build]
+    api_key
+    app = Spaceship::ConnectAPI::App.find("me.birchtree.BenchPhone")
+    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, build_number: options[:build].to_s, limit: 1).first
+    UI.user_error!("No build #{options[:build]} on TestFlight") unless build
+    text = File.read(File.join(__dir__, "whattotest.txt")).strip
+    locs = build.get_beta_build_localizations
+    if (loc = locs.find { |l| l.locale == "en-US" } || locs.first)
+      Spaceship::ConnectAPI.patch_beta_build_localizations(localization_id: loc.id, attributes: { whatsNew: text })
+    else
+      Spaceship::ConnectAPI.post_beta_build_localizations(build_id: build.id, attributes: { locale: "en-US", whatsNew: text })
+    end
+    UI.success("Updated What to Test for build #{build.version}")
+  end
+
+  desc "Answer export compliance (exempt encryption only) on uploaded builds that still ask"
+  lane :compliance do
+    api_key
+    app = Spaceship::ConnectAPI::App.find("me.birchtree.BenchPhone")
+    builds = Spaceship::ConnectAPI::Build.all(app_id: app.id, sort: "-uploadedDate", limit: 10)
+    builds.each { |b| UI.message("Build #{b.version}: #{b.processing_state}, non-exempt encryption: #{b.uses_non_exempt_encryption.inspect}") }
+    builds.select { |b| b.uses_non_exempt_encryption.nil? }.each do |b|
+      Spaceship::ConnectAPI.patch_builds(build_id: b.id, attributes: { usesNonExemptEncryption: false })
+      UI.success("Build #{b.version}: no non-exempt encryption")
+    end
+  end
+
+  desc "Replace the App Store screenshots with fastlane/screenshots/en-US"
+  lane :screenshots do
+    api_key
+    app = Spaceship::ConnectAPI::App.find("me.birchtree.BenchPhone")
+    version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.user_error!("No App Store version that can be edited (is one waiting for review?)") unless version
+    loc = version.get_app_store_version_localizations.find { |l| l.locale == "en-US" }
+    UI.user_error!("No en-US localization on #{version.version_string}") unless loc
+    dir = File.expand_path("screenshots/en-US", __dir__)
+    # ONLY=APP_IPAD_PRO_3GEN_129 (comma-separated) replaces just those sets.
+    types = { "APP_IPHONE_67" => "iphone69_*.png", "APP_IPHONE_DUO" => "duo_*.png",
+              "APP_IPAD_PRO_3GEN_129" => "ipad13_*.png" }
+    types = types.slice(*ENV["ONLY"].split(",")) if ENV["ONLY"]
+    types.each do |type, pattern|
+      files = Dir[File.join(dir, pattern)].sort
+      UI.user_error!("No screenshots match #{pattern}") if files.empty?
+      sets = loc.get_app_screenshot_sets(includes: "appScreenshots")
+      set = sets.find { |s| s.screenshot_display_type == type } ||
+            loc.create_app_screenshot_set(attributes: { screenshotDisplayType: type })
+      (set.app_screenshots || []).each(&:delete!)
+      files.each do |f|
+        set.upload_screenshot(path: f, wait_for_processing: false)
+        UI.message("#{type}: #{File.basename(f)}")
+      end
+      uploaded = loc.get_app_screenshot_sets(includes: "appScreenshots")
+                    .find { |s| s.screenshot_display_type == type }&.app_screenshots&.count || 0
+      UI.user_error!("#{type}: App Store Connect has #{uploaded} screenshots, expected #{files.count}") unless uploaded == files.count
+      UI.success("#{type}: #{uploaded} screenshots in App Store Connect")
+    end
+  end
+
+  # Everything the App Store record needs besides the build and screenshots.
+  # Safe to run again: each step sets the same values.
+  desc "Fill in the App Store listing: text, categories, review info, age rating, price, availability"
+  lane :listing do
+    api_key
+    app = Spaceship::ConnectAPI::App.find("me.birchtree.BenchPhone")
+    client = Spaceship::ConnectAPI.client.tunes_request_client
+
+    # Review contact: the same one Matt's other apps use.
+    contact = Spaceship::ConnectAPI::App.all.map do |a|
+      next if a.id == app.id
+      a.get_app_store_versions(filter: { appStoreState: "READY_FOR_SALE" }).first&.fetch_app_store_review_detail rescue nil
+    end.compact.find { |d| !d.contact_phone.to_s.empty? }
+    UI.user_error!("No review contact to copy from another app") unless contact
+
+    # SKIP_DELIVER=1 leaves the text alone and only does the steps below.
+    unless ENV["SKIP_DELIVER"]
+    deliver(
+      app_identifier: "me.birchtree.BenchPhone",
+      metadata_path: File.expand_path("metadata", __dir__),
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      skip_app_version_update: true,
+      force: true,
+      run_precheck_before_submit: false,
+      submit_for_review: false,
+      copyright: "#{Time.now.year} Birchtree Productions",
+      primary_category: "DEVELOPER_TOOLS",
+      secondary_category: "PRODUCTIVITY",
+      app_review_information: {
+        first_name: contact.contact_first_name,
+        last_name: contact.contact_last_name,
+        phone_number: contact.contact_phone,
+        email_address: contact.contact_email,
+        demo_required: false,
+        notes: File.read(File.expand_path("metadata/review_information/notes.txt", __dir__)).strip
+      }
+    )
+    end
+
+    app.update(attributes: { contentRightsDeclaration: "DOES_NOT_USE_THIRD_PARTY_CONTENT" })
+    UI.success("Content rights: no third-party content")
+
+    # Age rating: no objectionable content of any kind.
+    info = app.fetch_edit_app_info
+    declaration = info.fetch_age_rating_declaration
+    none = %w[alcoholTobaccoOrDrugUseOrReferences contests gamblingSimulated gunsOrOtherWeapons
+              medicalOrTreatmentInformation profanityOrCrudeHumor sexualContentGraphicAndNudity
+              sexualContentOrNudity horrorOrFearThemes matureOrSuggestiveThemes violenceCartoonOrFantasy
+              violenceRealistic violenceRealisticProlongedGraphicOrSadistic]
+    no = %w[advertising gambling healthOrWellnessTopics lootBox messagingAndChat parentalControls
+            ageAssurance unrestrictedWebAccess userGeneratedContent socialMedia]
+    attributes = none.to_h { |k| [k, "NONE"] }.merge(no.to_h { |k| [k, false] })
+    declaration.update(attributes: attributes)
+    UI.success("Age rating: answered no to everything")
+
+    # Free, everywhere.
+    free = client.get("v1/apps/#{app.id}/appPricePoints", { "filter[territory]" => "USA", "limit" => 200 })
+                 .body["data"].find { |p| p["attributes"]["customerPrice"].to_f.zero? }
+    UI.user_error!("No free price point") unless free
+    begin
+      client.post("v1/appPriceSchedules", {
+        data: { type: "appPriceSchedules", relationships: {
+          app: { data: { type: "apps", id: app.id } },
+          baseTerritory: { data: { type: "territories", id: "USA" } },
+          manualPrices: { data: [{ type: "appPrices", id: "${price}" }] } } },
+        included: [{ type: "appPrices", id: "${price}", attributes: { startDate: nil },
+                     relationships: { appPricePoint: { data: { type: "appPricePoints", id: free["id"] } } } }]
+      })
+      UI.success("Price: free")
+    rescue => e
+      UI.user_error!("Price: #{e.message}")
+    end
+
+    territories = client.get("v1/territories", { "limit" => 200 }).body["data"].map { |t| t["id"] }
+    begin
+      client.post("v2/appAvailabilities", {
+        data: { type: "appAvailabilities", attributes: { availableInNewTerritories: true }, relationships: {
+          app: { data: { type: "apps", id: app.id } },
+          territoryAvailabilities: { data: territories.map { |t| { type: "territoryAvailabilities", id: "${#{t}}" } } } } },
+        included: territories.map do |t|
+          { type: "territoryAvailabilities", id: "${#{t}}", attributes: { available: true },
+            relationships: { territory: { data: { type: "territories", id: t } } } }
+        end
+      })
+      UI.success("Availability: #{territories.count} territories")
+    rescue => e
+      raise unless e.message.include?("already exists")
+      UI.success("Availability: already set")
+    end
+  end
+
+  # Gets the next App Store version ready without sending it to review:
+  # creates it if needed, uploads the listing text and What's New from
+  # fastlane/metadata, and attaches the newest processed build of the
+  # current marketing version. Run `fastlane listing` after for the review
+  # contact, copyright and categories, then `fastlane submit` when it's time.
+  desc "Create the App Store version, upload its text and attach the newest build, without submitting"
+  lane :prepare do
+    key = api_key
+    version_string = phone_version.first
+    number = latest_testflight_build_number(api_key: key, app_identifier: "me.birchtree.BenchPhone",
+                                            version: version_string)
+    deliver(
+      api_key: key,
+      app_identifier: "me.birchtree.BenchPhone",
+      app_version: version_string,
+      metadata_path: File.expand_path("metadata", __dir__),
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      force: true,
+      run_precheck_before_submit: false,
+      submit_for_review: false
+    )
+    app = Spaceship::ConnectAPI::App.find("me.birchtree.BenchPhone")
+    version = app.get_edit_app_store_version(platform: Spaceship::ConnectAPI::Platform::IOS)
+    UI.user_error!("No editable App Store version #{version_string}") unless version&.version_string == version_string
+    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, version: version_string, build_number: number.to_s).first
+    UI.user_error!("No build #{number} of #{version_string}") unless build
+    version.select_build(build_id: build.id)
+    UI.success("#{version_string}: build #{number} attached, not submitted")
+  end
+
+  desc "Attach the newest processed build to the App Store version and submit it for review"
+  lane :submit do
+    key = api_key
+    build = latest_testflight_build_number(api_key: key, app_identifier: "me.birchtree.BenchPhone",
+                                           version: phone_version.first)
+    deliver(
+      api_key: key,
+      app_identifier: "me.birchtree.BenchPhone",
+      app_version: phone_version.first,
+      build_number: build.to_s,
+      skip_metadata: true,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      force: true,
+      run_precheck_before_submit: false,
+      submit_for_review: true,
+      automatic_release: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+end

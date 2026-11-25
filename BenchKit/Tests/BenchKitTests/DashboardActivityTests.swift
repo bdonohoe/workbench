@@ -1,0 +1,54 @@
+import Foundation
+import Testing
+@testable import BenchKit
+
+private let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+private func session(_ activity: ActivityKind, since: TimeInterval? = nil, stopped: TimeInterval? = nil,
+                     action: String? = nil, question: String? = nil) -> CompanionSession {
+    CompanionSession(id: UUID(), title: "Claude", activity: activity, action: action, question: question,
+                     stoppedAt: stopped.map { now.addingTimeInterval(-$0) }, since: since.map { now.addingTimeInterval(-$0) })
+}
+
+private func project(_ name: String, _ sessions: [CompanionSession], pr: CompanionPullRequest? = nil) -> CompanionProject {
+    CompanionProject(id: UUID(), name: name, repoName: name, path: "/tmp/\(name)", activity: .idle, pullRequest: pr, sessions: sessions)
+}
+
+@Test func dashboardPutsWhatNeedsYouFirst() {
+    let projects = [
+        project("Bench", [session(.working, since: 250, action: "Editing BenchWidgets.swift")]),
+        project("birchfeed", [session(.waiting, since: 70, question: "Allow npm run db:migrate?")]),
+        project("pace-api", [session(.remoteWorking, since: 730)]),
+        project("notes", [session(.idle)]),
+    ]
+    let state = DashboardActivity.state(for: projects, now: now)
+    #expect(state.rows.map(\.project) == ["birchfeed", "pace-api", "Bench"])
+    #expect(state.rows.first?.text == "Allow npm run db:migrate?")
+    #expect((state.working, state.waiting, state.done, state.more) == (2, 1, 0, 0))
+}
+
+@Test func dashboardDropsOldFinishedSessionsAndCapsRows() {
+    let pr = CompanionPullRequest(number: 42, title: "Lap chart", url: URL(string: "https://example.com")!, state: .open,
+                                  checks: .passing, passedCount: 8, totalCount: 8, failingNames: [])
+    let projects = [
+        project("Pace", [session(.done, stopped: 60)], pr: pr),
+        project("old", [session(.done, stopped: 3 * 60 * 60)]),
+        project("a", [session(.working, since: 1)]),
+        project("b", [session(.working, since: 2)]),
+        project("c", [session(.working, since: 3)]),
+        project("d", [session(.working, since: 4)]),
+    ]
+    let state = DashboardActivity.state(for: projects, now: now)
+    #expect(state.rows.count == DashboardActivity.maxRows)
+    #expect(state.more == 1)
+    #expect(state.done == 1)
+    #expect(!state.rows.contains { $0.project == "old" })
+}
+
+@Test func dashboardPayloadDecodesAsActivityKitWould() throws {
+    let state = DashboardActivity.state(for: [project("Bench", [session(.working, since: 5, action: "Building")])], now: now)
+    let payload = try DashboardPayload.update(state, alert: nil, now: now)
+    let aps = try #require(payload["aps"] as? [String: Any])
+    let data = try JSONSerialization.data(withJSONObject: try #require(aps["content-state"]))
+    #expect(try JSONDecoder().decode(DashboardAttributes.ContentState.self, from: data) == state)
+}

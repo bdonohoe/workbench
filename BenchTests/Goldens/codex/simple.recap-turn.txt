@@ -1,0 +1,7 @@
+used tools: false
+
+What the user asked:
+What is 2+2? Answer with just the number.
+
+Codex's final reply:
+4

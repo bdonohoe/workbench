@@ -1,0 +1,11 @@
+user      Read notes.txt and tell me in one sentence what it says. The
+assistant I’ll read `notes.txt`, create `hello.txt`, then run `ls`.
+steps
+  Bash | Reading notes.txt | result
+assistant The notes say a shopping list feature is planned for the rec
+steps
+  Bash | Running printf '%s\n' hi > hello.txt | result
+  Bash | Listing files | result
+assistant The notes say a shopping list feature is planned for the rec
+user      What is 2+2? Answer with just the number.
+assistant 4

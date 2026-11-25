@@ -1,0 +1,1 @@
+gpt-6.2-sol in /Users/matt/Apps/Bench/build/codex-fixtures/cproj: 12 requests, in 21347, cache write 0, cache read 256000, out 624, cost 0.000000

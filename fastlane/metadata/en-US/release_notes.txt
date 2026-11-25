@@ -1,0 +1,12 @@
+CODEX SESSIONS
+If you run Codex in Workbench 0.10 on your Mac, its sessions show up here as Codex: their name in the list and the chat, their permission cards, and their own models and effort levels when you switch models.
+
+WORKBENCH'S OWN COLORS
+The plain System look now uses Workbench's blue (mint in dark mode) instead of Claude's orange, from the very first screen.
+
+READY FOR IPHONE DUO
+In a chat, Back, Changes and the menu sit in the bar down the side of the screen when the Duo is closed, or open and turned sideways. The welcome and pairing screens are centered on an open Duo, and a diff's colors run to the edge of the screen.
+
+MORE
+A one-line command no longer gets a permission card seven lines tall.
+The welcome screen shows the app's real icon.

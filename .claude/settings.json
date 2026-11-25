@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Bash(bench discard-feedback)"]
+  }
+}

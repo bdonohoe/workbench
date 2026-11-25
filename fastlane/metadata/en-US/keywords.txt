@@ -1,0 +1,1 @@
+agents,coding,developer,terminal,ai,git,diff,pull request,code review,remote,cli,companion

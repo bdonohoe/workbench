@@ -1,0 +1,228 @@
+SessionStart (startup)  session file: yes
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Stop  session file: yes
+  state: done
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence.
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PreToolUse (AskUserQuestion)  session file: yes
+  state: waiting
+  prompt: Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence.
+  tool: AskUserQuestion
+  action: Asking you a question
+  plain action: Asking you a question
+  question: Which color do you prefer, red or blue?
+  picker: Which color do you prefer, red or blue? [Red, Blue]
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Notification (permission_prompt)  session file: yes
+  state: waiting
+  prompt: Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence.
+  tool: AskUserQuestion
+  action: Asking you a question
+  plain action: Asking you a question
+  question: Which color do you prefer, red or blue?
+  question kind: permission_prompt
+  picker: Which color do you prefer, red or blue? [Red, Blue]
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PostToolUse (AskUserQuestion)  session file: yes
+  state: working
+  prompt: Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence.
+  tool: AskUserQuestion
+  action: Asking you a question
+  plain action: Asking you a question
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Stop  session file: yes
+  state: done
+  prompt: Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence.
+  tool: AskUserQuestion
+  action: Asking you a question
+  plain action: Asking you a question
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Run this exact shell command and nothing else: sleep 10 && echo slept
+  tool: AskUserQuestion
+  action: Asking you a question
+  plain action: Asking you a question
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Run this exact shell command and nothing else: sleep 10 && echo slept
+  tool: Bash
+  action: Running sleep 10 && echo slept
+  plain action: Sleep 10 seconds then print slept
+  command: sleep 10 && echo slept
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PostToolUse (Bash)  session file: yes
+Stop  session file: yes
+  state: done
+  prompt: Run this exact shell command and nothing else: sleep 10 && echo slept
+  tool: Bash
+  action: Running sleep 10 && echo slept
+  plain action: Sleep 10 seconds then print slept
+  command: sleep 10 && echo slept
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: then say queued-received
+  tool: Bash
+  action: Running sleep 10 && echo slept
+  plain action: Sleep 10 seconds then print slept
+  command: sleep 10 && echo slept
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Stop  session file: yes
+  state: done
+  prompt: then say queued-received
+  tool: Bash
+  action: Running sleep 10 && echo slept
+  plain action: Sleep 10 seconds then print slept
+  command: sleep 10 && echo slept
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Run this exact shell command: sleep 40
+  tool: Bash
+  action: Running sleep 10 && echo slept
+  plain action: Sleep 10 seconds then print slept
+  command: sleep 10 && echo slept
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Run this exact shell command: sleep 40
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+PostToolUse (Bash)  session file: yes
+Stop  session file: yes
+  state: done
+  prompt: Run this exact shell command: sleep 40
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Plan how to add a one-line comment at the top of hello.py. Keep the plan to two lines.
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Stop  session file: yes
+  state: done
+  prompt: Plan how to add a one-line comment at the top of hello.py. Keep the plan to two lines.
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: <task-notification> <task-id>bheqcdlcs</task-id> <tool-use-id>toolu_01EQ9YAr63SmpMWSxpusgUda</tool-use-id> <output-file>/private/tmp/claude-501/-Users-matt-Apps-Bench-build-codex-fixtures-proj/e36cef9b-013c-4637-ba5e-028bc6382223/tasks/bheqcdlcs.output</output-file> <status>completed</status> <summary>Background command "Sleep for 40 seconds in background" completed (exit code 0)</summary> </task-notification>
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+Stop  session file: yes
+  state: done
+  prompt: <task-notification> <task-id>bheqcdlcs</task-id> <tool-use-id>toolu_01EQ9YAr63SmpMWSxpusgUda</tool-use-id> <output-file>/private/tmp/claude-501/-Users-matt-Apps-Bench-build-codex-fixtures-proj/e36cef9b-013c-4637-ba5e-028bc6382223/tasks/bheqcdlcs.output</output-file> <status>completed</status> <summary>Background command "Sleep for 40 seconds in background" completed (exit code 0)</summary> </task-notification>
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+PreCompact  session file: yes
+  state: done
+  prompt: <task-notification> <task-id>bheqcdlcs</task-id> <tool-use-id>toolu_01EQ9YAr63SmpMWSxpusgUda</tool-use-id> <output-file>/private/tmp/claude-501/-Users-matt-Apps-Bench-build-codex-fixtures-proj/e36cef9b-013c-4637-ba5e-028bc6382223/tasks/bheqcdlcs.output</output-file> <status>completed</status> <summary>Background command "Sleep for 40 seconds in background" completed (exit code 0)</summary> </task-notification>
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  compacting: yes
+  transcript: /recorded/interactive.jsonl
+SubagentStop  session file: yes
+SessionStart (compact)  session file: yes
+PostCompact  session file: yes
+  state: done
+  prompt: <task-notification> <task-id>bheqcdlcs</task-id> <tool-use-id>toolu_01EQ9YAr63SmpMWSxpusgUda</tool-use-id> <output-file>/private/tmp/claude-501/-Users-matt-Apps-Bench-build-codex-fixtures-proj/e36cef9b-013c-4637-ba5e-028bc6382223/tasks/bheqcdlcs.output</output-file> <status>completed</status> <summary>Background command "Sleep for 40 seconds in background" completed (exit code 0)</summary> </task-notification>
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl
+SessionEnd (other)  session file: yes
+  prompt: <task-notification> <task-id>bheqcdlcs</task-id> <tool-use-id>toolu_01EQ9YAr63SmpMWSxpusgUda</tool-use-id> <output-file>/private/tmp/claude-501/-Users-matt-Apps-Bench-build-codex-fixtures-proj/e36cef9b-013c-4637-ba5e-028bc6382223/tasks/bheqcdlcs.output</output-file> <status>completed</status> <summary>Background command "Sleep for 40 seconds in background" completed (exit code 0)</summary> </task-notification>
+  tool: Bash
+  action: Running sleep 40
+  plain action: Sleep for 40 seconds in background
+  command: sleep 40
+  question: Claude needs your permission
+  question kind: permission_prompt
+  start model: claude-haiku-5-5
+  transcript: /recorded/interactive.jsonl

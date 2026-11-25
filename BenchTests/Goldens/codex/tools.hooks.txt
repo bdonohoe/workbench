@@ -1,0 +1,73 @@
+SessionStart (startup)  session file: yes
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+  tool: Bash
+  action: Running cat notes.txt
+  plain action: Reading notes.txt
+  command: cat notes.txt
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+PostToolUse (Bash)  session file: yes
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Running printf '%s\n' hi > hello.txt
+  command: printf '%s\n' hi > hello.txt
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+PostToolUse (Bash)  session file: yes
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+  tool: Bash
+  action: Running ls
+  plain action: Listing files
+  command: ls
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+PostToolUse (Bash)  session file: yes
+Stop  session file: yes
+  state: done
+  prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+  tool: Bash
+  action: Running ls
+  plain action: Listing files
+  command: ls
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: What is 2+2? Answer with just the number.
+  tool: Bash
+  action: Running ls
+  plain action: Listing files
+  command: ls
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+Stop  session file: yes
+  state: done
+  prompt: What is 2+2? Answer with just the number.
+  tool: Bash
+  action: Running ls
+  plain action: Listing files
+  command: ls
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl
+SessionEnd (other)  session file: no
+  prompt: What is 2+2? Answer with just the number.
+  tool: Bash
+  action: Running ls
+  plain action: Listing files
+  command: ls
+  start model: gpt-6.2-sol
+  transcript: /recorded/tools.jsonl

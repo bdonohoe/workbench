@@ -1,0 +1,163 @@
+{
+  "hooks" : {
+    "Notification" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then printf 'waiting' > \"$BENCH_STATE_FILE.tmp\" && mv -f \"$BENCH_STATE_FILE.tmp\" \"$BENCH_STATE_FILE\"; fi",
+            "type" : "command"
+          },
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.question.tmp\" && mv -f \"$BENCH_STATE_FILE.question.tmp\" \"$BENCH_STATE_FILE.question.json\"; fi",
+            "type" : "command"
+          }
+        ],
+        "matcher" : "permission_prompt|elicitation_dialog"
+      }
+    ],
+    "PostCompact" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.compacted.tmp\" && mv -f \"$BENCH_STATE_FILE.compacted.tmp\" \"$BENCH_STATE_FILE.compacted.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "PostModelSwitch" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.model.tmp\" && mv -f \"$BENCH_STATE_FILE.model.tmp\" \"$BENCH_STATE_FILE.model.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse" : [
+      {
+        "hooks" : [
+          {
+            "command" : "input=$(cat); case \"$input\" in *'\"agent_id\":'*) if [ \"$(cat \"$BENCH_STATE_FILE\" 2>/dev/null)\" = waiting ] && grep -Eq '\"tool_name\": *\"(AskUserQuestion|ExitPlanMode)\"' \"$BENCH_STATE_FILE.tool.json\" 2>/dev/null; then exit 0; fi ;; esac; printf '%s' \"$input\" | { if [ -n \"$BENCH_STATE_FILE\" ]; then printf 'working' > \"$BENCH_STATE_FILE.tmp\" && mv -f \"$BENCH_STATE_FILE.tmp\" \"$BENCH_STATE_FILE\"; fi; }",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "PreCompact" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.compact.tmp\" && mv -f \"$BENCH_STATE_FILE.compact.tmp\" \"$BENCH_STATE_FILE.compact.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "PreModelSwitch" : [
+      {
+        "hooks" : [
+          {
+            "command" : "m=\"$BENCH_STATE_FILE.model-ok\"; if [ -n \"$BENCH_STATE_FILE\" ] && [ -n \"$(find \"$m\" -mmin -1 2>/dev/null)\" ]; then rm -f \"$m\"; printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreModelSwitch\",\"permissionDecision\":\"allow\"}}'; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse" : [
+      {
+        "hooks" : [
+          {
+            "command" : "input=$(cat); case \"$input\" in *'\"agent_id\":'*) if [ \"$(cat \"$BENCH_STATE_FILE\" 2>/dev/null)\" = waiting ] && grep -Eq '\"tool_name\": *\"(AskUserQuestion|ExitPlanMode)\"' \"$BENCH_STATE_FILE.tool.json\" 2>/dev/null; then exit 0; fi ;; esac; printf '%s' \"$input\" | { if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.tool.tmp\" && mv -f \"$BENCH_STATE_FILE.tool.tmp\" \"$BENCH_STATE_FILE.tool.json\"; fi; }",
+            "type" : "command"
+          }
+        ]
+      },
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then printf 'waiting' > \"$BENCH_STATE_FILE.tmp\" && mv -f \"$BENCH_STATE_FILE.tmp\" \"$BENCH_STATE_FILE\"; fi",
+            "type" : "command"
+          }
+        ],
+        "matcher" : "AskUserQuestion|ExitPlanMode"
+      }
+    ],
+    "SessionEnd" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_SESSION_FILE\" ]; then rm -f \"$BENCH_SESSION_FILE\"; fi",
+            "type" : "command"
+          }
+        ],
+        "matcher" : "prompt_input_exit|logout"
+      },
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then rm -f \"$BENCH_STATE_FILE\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "SessionStart" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_SESSION_FILE\" ]; then cat > \"$BENCH_SESSION_FILE\"; fi",
+            "type" : "command"
+          },
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.start.tmp\" && mv -f \"$BENCH_STATE_FILE.start.tmp\" \"$BENCH_STATE_FILE.start.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "Stop" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then printf 'done' > \"$BENCH_STATE_FILE.tmp\" && mv -f \"$BENCH_STATE_FILE.tmp\" \"$BENCH_STATE_FILE\"; fi",
+            "type" : "command"
+          },
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.stop.tmp\" && mv -f \"$BENCH_STATE_FILE.stop.tmp\" \"$BENCH_STATE_FILE.stop.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "SubagentStop" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.agent.tmp\" && mv -f \"$BENCH_STATE_FILE.agent.tmp\" \"$BENCH_STATE_FILE.agent.json\"; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit" : [
+      {
+        "hooks" : [
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then printf 'working' > \"$BENCH_STATE_FILE.tmp\" && mv -f \"$BENCH_STATE_FILE.tmp\" \"$BENCH_STATE_FILE\"; fi",
+            "type" : "command"
+          },
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then cat > \"$BENCH_STATE_FILE.prompt.tmp\" && mv -f \"$BENCH_STATE_FILE.prompt.tmp\" \"$BENCH_STATE_FILE.prompt.json\"; fi",
+            "type" : "command"
+          },
+          {
+            "command" : "if [ -n \"$BENCH_STATE_FILE\" ]; then f=\"$(dirname \"$(dirname \"$BENCH_STATE_FILE\")\")/bench-commands\"; m=\"$BENCH_STATE_FILE.commands\"; now=$(head -n 1 \"$f\" 2>/dev/null); if [ -n \"$now\" ] && [ \"$now\" != \"${BENCH_COMMANDS:-}\" ] && [ \"$now\" != \"$(cat \"$m\" 2>/dev/null)\" ]; then printf '%s' \"$now\" > \"$m\"; tail -n +2 \"$f\"; fi; fi",
+            "type" : "command"
+          }
+        ]
+      }
+    ]
+  }
+}

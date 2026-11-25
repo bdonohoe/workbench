@@ -1,0 +1,348 @@
+name: Bench
+options:
+  deploymentTarget:
+    macOS: "26.0"
+    iOS: "27.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+# Coverage instrumentation is off for every target. With it on, each binary
+# links the LLVM profiling runtime, which writes default.profraw into its
+# working directory when it exits: for the bench-session helper, that's the
+# project folder, so the file turned up in people's repos.
+# The signing team and bundle id prefix (Config/Signing.xcconfig), which a
+# gitignored Config/Local.xcconfig can override for anyone building from
+# source. Targets mustn't set DEVELOPMENT_TEAM themselves, or the override
+# can't reach them.
+configFiles:
+  Debug: Config/Signing.xcconfig
+  Release: Config/Signing.xcconfig
+
+settings:
+  base:
+    ENABLE_CODE_COVERAGE: NO
+    CLANG_COVERAGE_MAPPING: NO
+
+packages:
+  BenchKit:
+    path: BenchKit
+  # Updates for the Mac app. Keep in step with scripts/sparkle-tools.sh.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.1
+  # Usage analytics for both apps (see Analytics/Analytics.swift).
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    exactVersion: 3.93.1
+  # Colored code in the file and diff views (see Views/SyntaxColors.swift):
+  # tree-sitter, and CodeEdit's prebuilt grammars and highlight queries.
+  SwiftTreeSitter:
+    url: https://github.com/ChimeHQ/SwiftTreeSitter
+    from: 0.25.0
+  CodeEditLanguages:
+    url: https://github.com/CodeEditApp/CodeEditLanguages
+    exactVersion: 0.1.21
+  # The speech model behind dictation (see Bench/Dictation): Parakeet,
+  # run through Core ML. The same version Dict uses.
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio
+    exactVersion: 0.15.5
+
+targets:
+  Bench:
+    type: application
+    platform: macOS
+    sources:
+      - path: Bench
+      - path: Analytics
+      - path: bench-icon.icon
+        buildPhase: resources
+      # Icons people can switch to in Settings (AppIconChoice in BenchKit).
+      - path: AppIcons
+        buildPhase: resources
+      # libghostty looks for these next to the app binary (Contents/Resources).
+      - path: vendor/ghostty-resources/ghostty
+        type: folder
+        buildPhase: resources
+      - path: vendor/ghostty-resources/terminfo
+        type: folder
+        buildPhase: resources
+      # The `bench` command line tool. Bench puts Contents/Resources/bench-cli
+      # on PATH in every tab.
+      - path: bench-cli
+        type: folder
+        buildPhase: resources
+      # The wire format the session keeper speaks (see bench-session).
+      - path: bench-session/Shared
+    info:
+      path: Bench/Info.plist
+      properties:
+        # Where Sparkle looks for new versions, and the key updates must be signed with.
+        SUFeedURL: https://workbenchapp.dev/appcast.xml
+        SUPublicEDKey: O+2McoKScy6QiA8YtqRN0sO0Fz+y0Drk4Zud/TyBYtA=
+        SUAutomaticallyUpdate: true
+        SUScheduledCheckInterval: 14400
+        # The iPhone app reaches this Mac on the home network as well as over Tailscale.
+        NSLocalNetworkUsageDescription: Workbench looks for your Mac on your home network when Tailscale isn't available.
+        NSBonjourServices:
+          - _workbench._tcp
+        # Dictation, when it's turned on in Settings. Tools run in a tab
+        # that ask for the microphone show this too.
+        NSMicrophoneUsageDescription: Workbench uses the microphone when you dictate a message. A tool running in one of your tabs may also ask for it.
+    dependencies:
+      - package: BenchKit
+      - package: Sparkle
+      - package: PostHog
+      - package: SwiftTreeSitter
+      - package: CodeEditLanguages
+      - package: FluidAudio
+      - framework: vendor/GhosttyKit.xcframework
+        embed: false
+      - sdk: Carbon.framework
+      # Keeps kept tabs' sessions running across restarts. Lives in
+      # Contents/MacOS beside the app's own binary.
+      - target: bench-session
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
+    # Writes the commit the app was built from into its Info.plist, as
+    # BenchGitCommit, with a "+" when the tree had uncommitted changes.
+    # The sidebar's foot shows it (AppVersion). Runs on every build: the
+    # commit changes without any source file changing. The bundle's
+    # Info.plist is named as an input so the script waits for Xcode to
+    # write it: without that, Xcode is free to run the script first and
+    # then write the plist over the stamp, and sometimes does.
+    postBuildScripts:
+      - name: Stamp the git commit and distance from release into Info.plist
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          plist="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          commit=$(git -C "$SRCROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
+          if [ "$commit" != unknown ] && [ -n "$(git -C "$SRCROOT" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+            commit="$commit+"
+          fi
+          /usr/libexec/PlistBuddy -c "Delete :BenchGitCommit" "$plist" >/dev/null 2>&1 || true
+          /usr/libexec/PlistBuddy -c "Add :BenchGitCommit string $commit" "$plist"
+          # How many commits this build is past the public release with its
+          # build number, as BenchCommitsSinceRelease. Only make publish
+          # changes the build number, so that release is the newest one in
+          # this build's history. Its commit is "<version> build <N>",
+          # tagged v<version>-<N>. The tag comes after the official build,
+          # so the commit message is the fallback, and the official build
+          # counts 0. Left out when neither can be found.
+          /usr/libexec/PlistBuddy -c "Delete :BenchCommitsSinceRelease" "$plist" >/dev/null 2>&1 || true
+          version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist" 2>/dev/null)
+          build=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist" 2>/dev/null)
+          base=$(git -C "$SRCROOT" rev-parse -q --verify "refs/tags/v$version-$build^{commit}" 2>/dev/null \
+            || git -C "$SRCROOT" log -1 --format=%H -E --grep="^$version build $build\$" 2>/dev/null || true)
+          if [ -n "$base" ]; then
+            ahead=$(git -C "$SRCROOT" rev-list --count "$base..HEAD" 2>/dev/null || true)
+            if [ -n "$ahead" ]; then
+              /usr/libexec/PlistBuddy -c "Add :BenchCommitsSinceRelease integer $ahead" "$plist"
+            fi
+          fi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).Bench
+        # The app is called Workbench. Its bundle id, Swift module, support
+        # folder, and update feed keep the old name, Bench, so existing
+        # installs keep their settings and updates.
+        PRODUCT_NAME: Workbench
+        PRODUCT_MODULE_NAME: Bench
+        MARKETING_VERSION: "0.10"
+        CURRENT_PROJECT_VERSION: 68
+        SWIFT_VERSION: 6.0
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Bench/Bench.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Matt Birchler"
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        ASSETCATALOG_COMPILER_APPICON_NAME: bench-icon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: icon-classic icon-ultraviolet icon-ember-ridge icon-lagoon icon-coral-pop
+        COMBINE_HIDPI_IMAGES: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        DEAD_CODE_STRIPPING: YES
+        OTHER_LDFLAGS: "-lc++"
+        # libghostty is built for Apple silicon only.
+        ARCHS: arm64
+
+  # Tests for the Mac app's own model and companion code. BenchKit has its
+  # own tests under BenchKit/Tests. Run with `make test`.
+  BenchTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: BenchTests
+        # Expected results the tests read from the source folder (Golden.swift).
+        excludes:
+          - Goldens
+          - Screens
+    dependencies:
+      - target: Bench
+      # The app's packages too, so `@testable import Bench` can resolve
+      # everything the app imports. Not tree-sitter: linking its dynamic
+      # products into a test bundle fails, and with explicit modules off
+      # the Clang module behind it isn't scanned for.
+      - package: BenchKit
+      - package: PostHog
+      - package: FluidAudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).BenchTests
+        # The app's product is Workbench, not the target's name.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Workbench.app/Contents/MacOS/Workbench
+        BUNDLE_LOADER: $(TEST_HOST)
+        SWIFT_ENABLE_EXPLICIT_MODULES: NO
+        CLANG_ENABLE_EXPLICIT_MODULES: NO
+        SWIFT_VERSION: 6.0
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        ARCHS: arm64
+
+  # The session keeper and tab relay (see bench-session/main.swift).
+  bench-session:
+    type: tool
+    platform: macOS
+    sources:
+      - path: bench-session
+    settings:
+      base:
+        PRODUCT_NAME: bench-session
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).Bench.session
+        SWIFT_VERSION: 5.0
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        SKIP_INSTALL: YES
+        ARCHS: arm64
+
+  # The iPhone companion. Installed on Matt's own phone only.
+  BenchPhone:
+    type: application
+    platform: iOS
+    # A shared scheme, so Fastlane's archive can find it.
+    scheme: {}
+    sources:
+      - path: BenchPhone
+      - path: Analytics
+      - path: bench-icon.icon
+        buildPhase: resources
+      # Icons people can switch to in Settings (AppIconChoice in BenchKit).
+      - path: AppIcons
+        buildPhase: resources
+    dependencies:
+      - package: BenchKit
+      - package: PostHog
+      - target: BenchPhoneWidgets
+      - target: BenchPhoneNotifications
+    # Merged with the generated keys below. The array can't be an
+    # INFOPLIST_KEY_ setting, so these two live here. The versions are
+    # spelled out so this file's defaults don't replace them.
+    info:
+      path: BenchPhone/Info.plist
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Finds the Mac on the home network when Tailscale isn't there.
+        NSLocalNetworkUsageDescription: Workbench looks for your Mac on your home network when Tailscale isn't available.
+        NSBonjourServices:
+          - _workbench._tcp
+        # The keychain group shared with the notification extension
+        # (NotificationKeys in BenchKit).
+        BenchSharedKeychainGroup: $(AppIdentifierPrefix)$(BENCH_BUNDLE_PREFIX).BenchPhone.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).BenchPhone
+        CODE_SIGN_ENTITLEMENTS: BenchPhone/BenchPhone.entitlements
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        PRODUCT_NAME: Bench
+        MARKETING_VERSION: "1.2.3"
+        CURRENT_PROJECT_VERSION: 68
+        SWIFT_VERSION: 6.0
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Workbench
+        # Export compliance: the app only uses the encryption built into iOS
+        # (HTTPS and secure WebSockets to the Mac, and CryptoKit to open
+        # sealed notifications), which is exempt.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        INFOPLIST_KEY_NSCameraUsageDescription: "Workbench uses the camera to scan the pairing code shown in Workbench on your Mac."
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # The phone stays upright. The iPad turns any way and runs in a
+        # resizable window, like any iPad app.
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: bench-icon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: icon-classic icon-ultraviolet icon-ember-ridge icon-lagoon icon-coral-pop
+
+  # Opens sealed notifications from the Mac before they're shown.
+  BenchPhoneNotifications:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BenchPhoneNotifications
+    dependencies:
+      - package: BenchKit
+    info:
+      path: BenchPhoneNotifications/Info.plist
+      properties:
+        CFBundleDisplayName: Workbench
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        BenchSharedKeychainGroup: $(AppIdentifierPrefix)$(BENCH_BUNDLE_PREFIX).BenchPhone.shared
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).BenchPhone.notifications
+        PRODUCT_NAME: BenchPhoneNotifications
+        CODE_SIGN_ENTITLEMENTS: BenchPhoneNotifications/BenchPhoneNotifications.entitlements
+        MARKETING_VERSION: "1.2.3"
+        CURRENT_PROJECT_VERSION: 68
+        SWIFT_VERSION: 6.0
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+
+  # Live Activities for the phone app (lock screen and Dynamic Island).
+  BenchPhoneWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BenchPhoneWidgets
+    dependencies:
+      - package: BenchKit
+    info:
+      path: BenchPhoneWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Workbench
+        # Must match the app's, or App Store Connect warns about a mismatch.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BENCH_BUNDLE_PREFIX).BenchPhone.widgets
+        PRODUCT_NAME: BenchPhoneWidgets
+        MARKETING_VERSION: "1.2.3"
+        CURRENT_PROJECT_VERSION: 68
+        SWIFT_VERSION: 6.0
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES

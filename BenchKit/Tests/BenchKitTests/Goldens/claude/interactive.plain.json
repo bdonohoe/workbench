@@ -1,0 +1,203 @@
+[
+  {
+    "at" : 1795538055376,
+    "id" : "2ae7bcf1-c59b-45d7-8873-08c375ae377f",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "shell" : {
+      "command" : "ls"
+    },
+    "text" : "! ls"
+  },
+  {
+    "at" : 1795538055531,
+    "id" : "8d1b7c73-0b61-4b3c-a25c-6f2f0b2a3956",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "shell" : {
+      "command" : "",
+      "stderr" : "",
+      "stdout" : "NOTES.md\nREADME.md\nhello.py"
+    },
+    "text" : ""
+  },
+  {
+    "at" : 1795538057112,
+    "id" : "7cf71184-e7e2-4654-b6fa-db93659342f4",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The directory has three files: `NOTES.md`, `README.md`, and `hello.py`. `NOTES.md` is untracked, and the last two commits are \"after session a\" and \"Start\". What would you like to do next?"
+  },
+  {
+    "at" : 1795538071626,
+    "id" : "33ecac50-454a-4b6b-b59a-50c36659534c",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "Use the AskUserQuestion tool to ask me one multiple choice question: which color do I prefer, red or blue? Then reply with my choice in one short sentence."
+  },
+  {
+    "at" : 1795538073671,
+    "detail" : "Which color do you prefer, red or blue?",
+    "id" : "c7484f43-5bb8-447c-ac77-99a576c4d01a",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Asking you a question",
+    "toolName" : "AskUserQuestion",
+    "toolUseID" : "toolu_01QNafB2WfS85LgdLzLkAvpo"
+  },
+  {
+    "at" : 1795538097674,
+    "id" : "2857581f-4a48-4fa4-9a0c-974341b4eab1",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "You prefer red."
+  },
+  {
+    "at" : 1795538115770,
+    "id" : "7fa58062-0717-494b-8968-6b57add79e06",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "Run this exact shell command and nothing else: sleep 10 && echo slept"
+  },
+  {
+    "at" : 1795538117065,
+    "detail" : "sleep 10 && echo slept",
+    "id" : "186b23b9-7cd6-4576-ae84-cd7497daa7a7",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Sleep 10 seconds then print slept",
+    "toolName" : "Bash",
+    "toolUseID" : "toolu_01UAhq4j5JzxRfanVZ5ek69T"
+  },
+  {
+    "at" : 1795538128004,
+    "id" : "044e087a-92b7-49da-b00e-bd28b106f237",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The command printed `slept`."
+  },
+  {
+    "at" : 1795538131942,
+    "id" : "e36917de-faa2-4b22-ba30-c68ca189940c",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "then say queued-received"
+  },
+  {
+    "at" : 1795538133037,
+    "id" : "a85964ee-c14b-406a-aa39-5818524bb5e8",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "queued-received"
+  },
+  {
+    "at" : 1795538161089,
+    "id" : "02ccd4ce-7b04-4546-ba50-40cfcf313b9a",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "Run this exact shell command: sleep 40"
+  },
+  {
+    "at" : 1795538162343,
+    "detail" : "sleep 40",
+    "id" : "05dbed88-223f-4f30-871f-a01fe1f4547c",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Sleep for 40 seconds",
+    "toolName" : "Bash",
+    "toolUseID" : "toolu_016D3q8sByBDfDA1i24e9MqE"
+  },
+  {
+    "at" : 1795538163676,
+    "id" : "b646e3cc-aef6-412a-8cea-1f2b91bc800b",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The harness blocked a standalone `sleep 40` and suggested running it in the background, so I'll do that."
+  },
+  {
+    "at" : 1795538163929,
+    "detail" : "sleep 40",
+    "id" : "21aecbfc-2d3c-40ae-9cdb-d87bbc88bc26",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Sleep for 40 seconds in background",
+    "toolName" : "Bash",
+    "toolUseID" : "toolu_01EQ9YAr63SmpMWSxpusgUda"
+  },
+  {
+    "at" : 1795538164933,
+    "id" : "ca7915a2-9df7-4f4d-8d7e-63bdc4223170",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The foreground `sleep 40` was blocked by the harness, so I ran it in the background instead (task `bheqcdlcs`). I'll report when it finishes."
+  },
+  {
+    "at" : 1795538185403,
+    "id" : "9585b230-9f7e-421c-b8db-e92bc61be4c0",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "Plan how to add a one-line comment at the top of hello.py. Keep the plan to two lines."
+  },
+  {
+    "at" : 1795538187236,
+    "id" : "8e12170a-4bac-4a6e-9ba4-d57fd4d0b7cb",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "1. Read `hello.py` to check its existing first line and shebang, then insert `# <comment>` above it with Edit, keeping any shebang on line 1.\n2. Confirm the file still runs with `python3 hello.py`, then leave the change uncommitted for you to review."
+  },
+  {
+    "at" : 1795538205020,
+    "id" : "fdb9ce6d-ae9d-406d-8266-2dd17f2b6314",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The background `sleep 40` finished with exit code 0."
+  },
+  {
+    "at" : 1795538271313,
+    "detail" : "Claude summarized the earlier messages to make room. It still knows what you were working on.",
+    "id" : "6afb9b58-8351-425f-ae89-7624528435fa",
+    "images" : [
+
+    ],
+    "role" : "system",
+    "text" : "Conversation compacted"
+  }
+]

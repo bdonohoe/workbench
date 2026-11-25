@@ -1,0 +1,38 @@
+PreToolUse (Bash)  session file: no
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Running printf '%s\n' hi > hello.txt
+  command: printf '%s\n' hi > hello.txt
+  transcript: /recorded/permission.jsonl
+PermissionRequest (Bash)  session file: no
+  state: waiting
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Allow writing hi to hello.txt in the read-only workspace?
+  command: printf '%s\n' hi > hello.txt
+  question: Allow writing hi to hello.txt in the read-only workspace?
+  allow or deny: yes
+  transcript: /recorded/permission.jsonl
+PostToolUse (Bash)  session file: no
+  state: working
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Running printf '%s\n' hi > hello.txt
+  command: printf '%s\n' hi > hello.txt
+  question: Allow writing hi to hello.txt in the read-only workspace?
+  transcript: /recorded/permission.jsonl
+Stop  session file: no
+  state: done
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Running printf '%s\n' hi > hello.txt
+  command: printf '%s\n' hi > hello.txt
+  question: Allow writing hi to hello.txt in the read-only workspace?
+  transcript: /recorded/permission.jsonl
+SessionEnd (other)  session file: no
+  tool: Bash
+  action: Running printf '%s\n' hi > hello.txt
+  plain action: Running printf '%s\n' hi > hello.txt
+  command: printf '%s\n' hi > hello.txt
+  question: Allow writing hi to hello.txt in the read-only workspace?
+  transcript: /recorded/permission.jsonl

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_workbench._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Workbench looks for your Mac on your home network when Tailscale isn't available.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Workbench uses the microphone when you dictate a message. A tool running in one of your tabs may also ask for it.</string>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://workbenchapp.dev/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>O+2McoKScy6QiA8YtqRN0sO0Fz+y0Drk4Zud/TyBYtA=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>14400</integer>
+</dict>
+</plist>

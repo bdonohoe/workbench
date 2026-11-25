@@ -1,0 +1,9 @@
+New in this build:
+
+• Codex sessions. If you run Codex tabs in Workbench 0.10 on your Mac, they show up here as Codex, not Claude: their name in the list and the chat, their permission cards, and their own models and effort levels when you switch models. Please try sending a message, allowing a request and switching the model in a Codex session.
+
+• Workbench's own colors. The plain System look uses Workbench's blue (mint in dark mode) instead of Claude's orange, from the very first screen.
+
+• Shorter permission cards. A one-line command no longer gets a card seven lines tall.
+
+Things to look for: anywhere a Codex session still says Claude, or a Claude session says Codex.

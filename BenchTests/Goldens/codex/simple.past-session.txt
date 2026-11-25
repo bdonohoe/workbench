@@ -1,0 +1,4 @@
+id: rollout-simple
+agent: codex
+first prompt: Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls.
+last prompt: What is 2+2? Answer with just the number.

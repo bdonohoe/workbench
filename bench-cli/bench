@@ -1,0 +1,107 @@
+#!/bin/sh
+# bench: ask Workbench to do things, from a terminal.
+#
+# Workbench puts this on PATH in every tab it opens, so you (or Claude,
+# from a Claude tab) can drive the app from the shell: start and steer
+# agents, open tabs, send notifications, manage the project list.
+#
+#   bench help              every command, from the app that's running
+#   bench help <command>    one command's arguments, notes and examples
+#
+# This script knows none of the commands. It hands its arguments, the
+# folder it ran in and the tab it ran from to Workbench by dropping a
+# request file where the app is watching, then prints the reply the app
+# writes next to it. So the list of commands always comes from the copy of
+# Workbench that's running, and adding one never means changing this file.
+
+set -u
+requests="${BENCH_REQUESTS:-$HOME/Library/Application Support/Bench/requests}"
+
+[ $# -gt 0 ] || set -- help
+mkdir -p "$requests" || exit 1
+
+# Interrupted while waiting: take the files away, which is also how
+# Workbench learns that nobody is waiting for the answer any more.
+request=""
+working=""
+trap 'rm -f "$request" "$working" ${input:+"$input"}; exit 130' INT TERM HUP
+
+# Writes the request and waits for the answer, which lands in $reply.
+# $input is a file holding standard input, once Workbench has asked for it.
+input=""
+ask() {
+    id=$(uuidgen)
+    request="$requests/$id.request"
+    reply="$requests/$id.reply"
+    working="$requests/$id.working"
+    {
+        printf 'cli\ntab=%s\ncwd=%s\nargs=%s\nstdin=%s\n\n' "${BENCH_TAB_ID:-}" "$PWD" "$#" "${input:+1}"
+        printf '%s\0' "$@"
+        if [ -n "$input" ]; then cat "$input"; fi
+    } > "$request.tmp" && mv -f "$request.tmp" "$request" || exit 1
+
+    # Workbench answers within a moment when it's open. For a command that
+    # takes a while (making a worktree, waiting on an agent) it first
+    # leaves a note with its process id, and then there's no hurry as long
+    # as that process is still there.
+    tries=0
+    while [ ! -f "$reply" ]; do
+        tries=$((tries + 1))
+        if [ -f "$working" ]; then
+            if [ $((tries % 20)) -eq 0 ] && ! kill -0 "$(cat "$working" 2>/dev/null)" 2>/dev/null; then
+                rm -f "$working"
+                echo "Workbench quit before it answered." >&2
+                exit 1
+            fi
+        elif [ $tries -gt 50 ]; then
+            rm -f "$request"
+            echo "No answer from Workbench. Is Workbench open on this Mac?" >&2
+            exit 1
+        fi
+        sleep 0.1
+    done
+    rm -f "$working"
+}
+
+ask "$@"
+status=$(head -n 1 "$reply")
+
+# Workbench wants standard input: a prompt or message that wasn't given as
+# an argument. It's only read when asked for, since reading it when
+# nothing is coming would wait forever.
+if [ "$status" = "stdin" ]; then
+    if [ -t 0 ]; then
+        tail -n +2 "$reply" >&2
+        rm -f "$reply"
+        exit 2
+    fi
+    rm -f "$reply"
+    input="$requests/$(uuidgen).input"
+    cat > "$input"
+    ask "$@"
+    rm -f "$input"
+    status=$(head -n 1 "$reply")
+fi
+
+case "$status" in
+    ok)
+        tail -n +2 "$reply"
+        rm -f "$reply"
+        exit 0
+        ;;
+    usage)
+        tail -n +2 "$reply" >&2
+        rm -f "$reply"
+        exit 2
+        ;;
+    *)
+        # A copy of Workbench from before this script was updated.
+        if grep -q "doesn't know the command 'cli'" "$reply"; then
+            echo "Workbench was updated. Restart it to use the bench command." >&2
+        else
+            tail -n +2 "$reply" >&2
+        fi
+        rm -f "$reply"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,10 @@
+// Copy to Config/Local.xcconfig and fill in your own. It's gitignored.
+
+// Your Apple developer team, from developer.apple.com > Membership. Leave
+// it empty to sign the Mac app to run locally only.
+DEVELOPMENT_TEAM =
+
+// A reverse-DNS prefix you own. The iPhone app and its extensions need one
+// that's registered to your team; the Mac app can keep the default, but a
+// different one keeps your build's settings apart from the official app's.
+BENCH_BUNDLE_PREFIX = com.example

@@ -1,0 +1,112 @@
+SessionStart (startup)  session file: yes
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: Bash
+  action: Running cat notes.txt
+  plain action: Reading notes.txt
+  command: cat notes.txt
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PostToolUse (Bash)  session file: yes
+PreToolUse (apply_patch)  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: apply_patch
+  action: Using apply_patch
+  plain action: Using apply_patch
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PostToolUse (apply_patch)  session file: yes
+PreToolUse (apply_patch)  session file: yes
+PostToolUse (apply_patch)  session file: yes
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: Bash
+  action: Running python3 -c 'from greet import greet; print(greet("Ada"))'
+  plain action: Running python3 -c 'from greet import greet; print(greet("Ada"))'
+  command: python3 -c 'from greet import greet; print(greet("Ada"))'
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PostToolUse (Bash)  session file: yes
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: Bash
+  action: Running ls nope-missing
+  plain action: Listing nope-missing
+  command: ls nope-missing
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PostToolUse (Bash)  session file: yes
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: Bash
+  action: Running rg -n greet
+  plain action: Searching for “greet”
+  command: rg -n greet
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PostToolUse (Bash)  session file: yes
+Stop  session file: yes
+  state: done
+  prompt: Do these steps in order, briefly. 1) Make a plan of the steps with your plan tool. 2) Read notes.txt. 3) Create greet.py with a function greet(name) that returns "Hello, " + name, using apply_patch. 4) Edit greet.py so greet uses an f-string, using apply_patch. 5) Run it with python3 -c. 6) Run the shell command ls nope-missing (it will fail, that is expected). 7) Search the files for greet with rg. 8) Finish with a two sentence summary that includes a short markdown list.
+  tool: Bash
+  action: Running rg -n greet
+  plain action: Searching for “greet”
+  command: rg -n greet
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: Run the shell command sleep 30 and then say done.
+  tool: Bash
+  action: Running rg -n greet
+  plain action: Searching for “greet”
+  command: rg -n greet
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+PreToolUse (Bash)  session file: yes
+  state: working
+  prompt: Run the shell command sleep 30 and then say done.
+  tool: Bash
+  action: Running sleep 30
+  plain action: Running sleep 30
+  command: sleep 30
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+UserPromptSubmit  session file: yes
+  state: working
+  prompt: also say queued-ok afterwards
+  tool: Bash
+  action: Running sleep 30
+  plain action: Running sleep 30
+  command: sleep 30
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+Interrupt  session file: yes
+  state: done
+  prompt: also say queued-ok afterwards
+  tool: Bash
+  action: Running sleep 30
+  plain action: Running sleep 30
+  command: sleep 30
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl
+SessionEnd (other)  session file: no
+  prompt: also say queued-ok afterwards
+  tool: Bash
+  action: Running sleep 30
+  plain action: Running sleep 30
+  command: sleep 30
+  start model: gpt-6.2-sol
+  transcript: /recorded/interrupt.jsonl

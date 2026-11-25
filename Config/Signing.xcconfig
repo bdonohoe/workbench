@@ -1,0 +1,11 @@
+// Who signs Workbench, and the start of every bundle id. These are the
+// developer's. To build Workbench yourself, copy Local.xcconfig.example to
+// Local.xcconfig (gitignored) beside this file and put your own in it.
+//
+// A build signed by any other team is treated as unofficial: it never
+// checks for updates and sends no analytics (Analytics/OfficialBuild.swift).
+
+DEVELOPMENT_TEAM = ZPU7B69KH3
+BENCH_BUNDLE_PREFIX = me.birchtree
+
+#include? "Local.xcconfig"

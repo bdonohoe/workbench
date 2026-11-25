@@ -1,0 +1,92 @@
+[
+  {
+    "at" : 1795541242952,
+    "id" : "01a20e99-1447-7312-85d4-5b85c67ca4ea",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "Read notes.txt and tell me in one sentence what it says. Then create a file hello.txt containing the word hi. Then run the shell command ls."
+  },
+  {
+    "at" : 1795541245449,
+    "id" : "msg_07e86a155f2fbac8016b05c8fcc6e487d1b50d208da2d9a239",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "I’ll read `notes.txt`, create `hello.txt`, then run `ls`."
+  },
+  {
+    "at" : 1795541245703,
+    "detail" : "cat notes.txt",
+    "id" : "exec-d4ad1db0-323f-42c8-9869-e406236cd14d",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Reading notes.txt",
+    "toolName" : "Bash",
+    "toolUseID" : "exec-d4ad1db0-323f-42c8-9869-e406236cd14d"
+  },
+  {
+    "at" : 1795541247970,
+    "id" : "msg_07e86a155f2fbac8016b05c8ff792887d1a8c4e6009400f5c1",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The notes say a shopping list feature is planned for the recipes app."
+  },
+  {
+    "at" : 1795541248927,
+    "detail" : "printf '%s\\n' hi > hello.txt",
+    "id" : "exec-0678ea1b-6b31-4b3f-a43f-f2dcbc2c103c",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Running printf '%s\\n' hi > hello.txt",
+    "toolName" : "Bash",
+    "toolUseID" : "exec-0678ea1b-6b31-4b3f-a43f-f2dcbc2c103c"
+  },
+  {
+    "at" : 1795541248980,
+    "detail" : "ls",
+    "id" : "exec-697ed609-56c4-4059-8147-ae791efabcff",
+    "images" : [
+
+    ],
+    "role" : "tool",
+    "text" : "Listing files",
+    "toolName" : "Bash",
+    "toolUseID" : "exec-697ed609-56c4-4059-8147-ae791efabcff"
+  },
+  {
+    "at" : 1795541251140,
+    "id" : "msg_07e86a155f2fbac8016b05c902661487d1a6bd49c39e9c38f9",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "The notes say a shopping list feature is planned for the recipes app.\n\nCreated `hello.txt` containing `hi`. `ls` listed `hello.txt` and `notes.txt`."
+  },
+  {
+    "at" : 1795541307949,
+    "id" : "01a20e9a-122c-7781-8925-c5028315b0d9",
+    "images" : [
+
+    ],
+    "role" : "user",
+    "text" : "What is 2+2? Answer with just the number."
+  },
+  {
+    "at" : 1795541309156,
+    "id" : "msg_07e86a155f2fbac8016b05c93d064887d1a84176f889880983",
+    "images" : [
+
+    ],
+    "role" : "assistant",
+    "text" : "4"
+  }
+]

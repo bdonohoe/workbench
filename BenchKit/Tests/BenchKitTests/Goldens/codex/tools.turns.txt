@@ -1,0 +1,16 @@
+user      Do these steps in order, briefly. 1) Make a plan of the step
+assistant I’ll follow the steps in order and verify the greeting with 
+assistant I’ll use an inline plan since the plan tool is unavailable. 
+steps
+  Bash | Reading notes.txt | result
+  Write | Writing greet.py | result
+  Edit | Editing greet.py | result
+  Bash | Running python3 -c 'from greet import greet; print(greet("Ad | result
+  Bash | Listing nope-missing | result (failed)
+  Bash | Searching for “greet” | result
+assistant I used an inline plan because the plan tool was unavailable,
+user      Run the shell command sleep 30 and then say done.
+assistant I’ll run `sleep 30` and wait for it to finish.
+user      also say queued-ok afterwards
+steps
+  Bash | Running sleep 30 | result (failed)

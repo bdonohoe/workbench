@@ -1,0 +1,40 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/
+xcuserdata/
+*.xcuserstate
+
+# Vendored toolchain and Ghostty source (fetched by `make ghostty`)
+vendor/zig/
+vendor/ghostty/
+vendor/ghostty-build.log
+vendor/GhosttyKit.xcframework/
+vendor/ghostty-resources/
+vendor/ghostty-deps/
+vendor/zig-cache-aside/
+
+# macOS
+.DS_Store
+
+# Fastlane / secrets
+fastlane/.env
+*.p8
+
+# SourceKit and SwiftPM build output for the shared package
+BenchKit/.build/
+.build/
+.swiftpm/
+
+# Sparkle command line tools (fetched by scripts/sparkle-tools.sh)
+vendor/sparkle/
+fastlane/report.xml
+fastlane/README.md
+
+# The vendored toolchain lives only on this Mac (a worktree may symlink it).
+/vendor
+.superpowers/
+build-test/
+
+# Your own signing settings (see Config/Signing.xcconfig)
+Config/Local.xcconfig

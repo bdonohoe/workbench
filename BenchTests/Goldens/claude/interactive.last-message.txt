@@ -1,0 +1,4 @@
+start: The background `sleep 40` finished with exit code 0.
+
+whole:
+The background `sleep 40` finished with exit code 0.

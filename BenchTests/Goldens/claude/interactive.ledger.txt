@@ -1,0 +1,1 @@
+claude-haiku-5-5 in /Users/matt/Apps/Bench/build/codex-fixtures/proj: 11 requests, in 24, cache write 37397, cache read 638615, out 1181, cost 0.014458, uncached 0.068194
