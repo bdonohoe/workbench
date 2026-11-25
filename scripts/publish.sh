@@ -3,7 +3,8 @@
 #
 #   make publish NOTES=notes.md [VERSION=0.3]
 #
-# 1. Runs BenchKit's tests, and stops here if any fail.
+# 1. Runs every test suite (BenchKit's, the Mac app's and the relay's),
+#    and stops here if any fail.
 # 2. Bumps the build number (and the version, if given) in a commit
 #    named "<version> build <number>".
 # 3. Builds, signs with Developer ID, and notarizes (scripts/notarize.sh).
@@ -60,11 +61,23 @@ fi
 rm -rf "$WORK" && mkdir -p "$WORK"
 
 # Updates install themselves on idle Macs, so a bad release spreads with
-# nobody watching. Nothing is committed or built until these pass.
-echo "Running tests"
-if ! (cd BenchKit && swift test) > "$WORK/tests.log" 2>&1; then
-    tail -40 "$WORK/tests.log" >&2
-    fail "Tests failed, so nothing was published. Full output: $WORK/tests.log"
+# nobody watching. Nothing is committed or built until every suite passes:
+# BenchKit's, the Mac app's, and the relay's.
+echo "Running BenchKit's tests"
+if ! (cd BenchKit && swift test) > "$WORK/tests-benchkit.log" 2>&1; then
+    tail -40 "$WORK/tests-benchkit.log" >&2
+    fail "BenchKit's tests failed, so nothing was published. Full output: $WORK/tests-benchkit.log"
+fi
+echo "Running the Mac app's tests"
+if ! make test > "$WORK/tests-mac.log" 2>&1; then
+    tail -40 "$WORK/tests-mac.log" >&2
+    fail "The Mac app's tests failed, so nothing was published. Full output: build/last-test.log"
+fi
+echo "Running the relay's tests"
+command -v node >/dev/null || fail "The relay's tests need Node (brew install node)."
+if ! (cd relay && npm test) > "$WORK/tests-relay.log" 2>&1; then
+    tail -40 "$WORK/tests-relay.log" >&2
+    fail "The relay's tests failed, so nothing was published. Full output: $WORK/tests-relay.log"
 fi
 
 scripts/sparkle-tools.sh >/dev/null
