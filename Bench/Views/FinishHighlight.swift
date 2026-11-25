@@ -73,6 +73,8 @@ struct FinishHighlight: NSViewRepresentable {
                 return
             }
             waiting = nil
+            // The brighter-than-white colors and layers below need macOS 26.
+            guard #available(macOS 26, *) else { return }
             // Only where the display can go past white. Anywhere else the
             // regular highlight is the whole show.
             guard let screen = window.screen,
