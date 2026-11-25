@@ -10,13 +10,21 @@
 # 4. Uploads the build's debug symbols to PostHog, so its crash reports
 #    are readable (scripts/upload-dsyms.sh). SKIP_DSYMS=1 skips this if
 #    PostHog is down; upload them afterwards with `make dsyms`.
-# 5. Signs the zip with Bench's Sparkle key, puts it in a GitHub release
-#    on mattbirchler/bench-releases with the notes, and adds it to the
-#    update feed there, along with the latest website (website/). The
+# 5. Signs the zip with Bench's Sparkle key and pushes the version commit
+#    and a tag to main on mattbirchler/workbench.
+# 6. Puts the zip in a GitHub release on that tag, with the notes. The
 #    release also carries Workbench.dmg, the disk image new people
 #    download; releases/latest/download/Workbench.dmg always points at the
 #    newest one.
-# 6. Pushes the version commit and a tag to Bench's main branch.
+# 7. Adds the release to the update feed, appcast.xml in
+#    mattbirchler/bench-releases, along with the latest website
+#    (website/). Its GitHub Pages serves both at workbenchapp.dev, the
+#    feed address every copy of Workbench has built in, so the feed stays
+#    there even though releases moved. Older entries keep pointing at
+#    their zips in bench-releases.
+#
+# The feed changes last, so no Mac is ever told about a zip that isn't
+# there yet.
 #
 # NOTES is a short Markdown file written for people: what changed and why
 # they'd care. It shows in Sparkle's update window and on the release page.
@@ -26,7 +34,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-RELEASES_REPO=mattbirchler/bench-releases
+# Where the update feed and website live (GitHub Pages at workbenchapp.dev).
+FEED_REPO=mattbirchler/bench-releases
+# Where each release's zip and disk image go: the source repo, so a
+# release sits on the commit it was built from.
+RELEASES_REPO=mattbirchler/workbench
 FEED_URL=https://workbenchapp.dev/appcast.xml
 WORK=build/publish
 DRY_RUN=${DRY_RUN:-0}
@@ -41,6 +53,7 @@ if [[ "$DRY_RUN" != 1 ]]; then
     [[ -z "$(git status --porcelain)" ]] || fail "Commit or stash your changes first."
     git fetch -q origin main
     [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || fail "main isn't in step with origin/main."
+    [[ "$(git remote get-url origin)" == *"$RELEASES_REPO"* ]] || fail "origin should be $RELEASES_REPO, where the release goes."
 fi
 
 rm -rf "$WORK" && mkdir -p "$WORK"
@@ -57,7 +70,7 @@ scripts/sparkle-tools.sh >/dev/null
 
 # The next build number is one past both this repo and the live feed, so
 # Sparkle always sees it as newer.
-gh repo clone "$RELEASES_REPO" "$WORK/releases" -- -q
+gh repo clone "$FEED_REPO" "$WORK/releases" -- -q
 CURRENT=$(python3 scripts/version.py get)
 CURRENT_VERSION=${CURRENT% *}
 CURRENT_BUILD=${CURRENT#* }
@@ -103,14 +116,20 @@ if [[ "$DRY_RUN" == 1 ]]; then
     exit 0
 fi
 
-# The zip goes up before the feed points at it.
-gh release create "$TAG" "$ZIP" "$WORK/Workbench.dmg" --repo "$RELEASES_REPO" --title "Workbench $VERSION (build $BUILD)" --notes-file "$NOTES"
+# The tag goes up first, so the release is made on this commit rather
+# than on whatever main was, and the zip goes up before the feed points
+# at it.
+git tag "$TAG"
+git push -q origin main "$TAG"
+gh release create "$TAG" "$ZIP" "$WORK/Workbench.dmg" --repo "$RELEASES_REPO" --verify-tag \
+    --title "Workbench $VERSION (build $BUILD)" --notes-file "$NOTES" \
+    || fail "The release didn't upload, and the feed is untouched, so no Mac sees it. $TAG is pushed: finish with
+  gh release create $TAG $ZIP $WORK/Workbench.dmg --repo $RELEASES_REPO --verify-tag --title \"Workbench $VERSION (build $BUILD)\" --notes-file $NOTES
+then put the feed and site up: scripts/sync-website.sh $WORK/releases && git -C $WORK/releases add -A && git -C $WORK/releases commit -m \"Workbench $VERSION build $BUILD\" && git -C $WORK/releases push"
 # The website goes up with each release, so the live site matches main.
 scripts/sync-website.sh "$WORK/releases"
 git -C "$WORK/releases" add -A
 git -C "$WORK/releases" commit -q -m "Workbench $VERSION build $BUILD"
 git -C "$WORK/releases" push -q origin main
 
-git tag "$TAG"
-git push -q origin main "$TAG"
 echo "Published Workbench $VERSION build $BUILD. Macs pick it up within four hours, or right away with Check for Updates."
