@@ -676,10 +676,12 @@ final class AppStore {
                     newest[id] = date
                 }
             }
-            await MainActor.run {
-                self?.noteHistory(newest)
-                self?.closeInactiveTabs()
-            }
+            // Two calls on the store, not one closure sent to the main
+            // actor: a closure would carry the weak `self` across with
+            // it, which Xcode 26's compiler won't allow.
+            let found = newest
+            await self?.noteHistory(found)
+            await self?.closeInactiveTabs()
         }
     }
 
