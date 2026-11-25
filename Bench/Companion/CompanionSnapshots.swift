@@ -252,9 +252,9 @@ struct CompanionSnapshots {
         }
         return found.map { item in
             let running = runningTabs(item.command, in: project)
-            let ports = Set(running.flatMap { ports.ports(forTab: $0).map(\.port) })
+            let listening = Set(running.flatMap { ports.ports(forTab: $0).map(\.port) })
             return CompanionShortcut(id: item.id, name: item.name, symbol: item.symbol, command: item.command,
-                                     isRunning: !running.isEmpty, ports: ports.sorted(), showsInTabBar: item.inTabBar)
+                                     isRunning: !running.isEmpty, ports: listening.sorted(), showsInTabBar: item.inTabBar)
         }
     }
 
