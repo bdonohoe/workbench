@@ -2,7 +2,11 @@
 
 A static site with no build step: plain HTML, CSS, and JavaScript. It's live
 at https://workbenchapp.dev/, served by GitHub Pages from
-the bench-releases repo.
+the bench-releases repo, along with the update feed (`appcast.xml`). Every
+copy of Workbench reads the feed at that address, so it stays there. New
+releases themselves are made in
+[workbench](https://github.com/mattbirchler/workbench/releases), the source
+repo; the ones from before it went public stay in bench-releases.
 
 ## Publishing
 
@@ -23,18 +27,19 @@ cd website && python3 -m http.server 8787   # then open http://localhost:8787
 
 - `index.html`: the landing page. The floating icon is the app icon's own
   layers in CSS 3D, and the app window below it is HTML, not a screenshot.
-- `releases.html`: the version history, loaded in the browser from
-  [bench-releases](https://github.com/mattbirchler/bench-releases/releases) on
-  GitHub. New releases show up on their own, with the same notes that
+- `releases.html`: the version history, loaded in the browser from both
+  repos' releases on GitHub and merged, newest first. New releases show up on their own, with the same notes that
   `make publish` posts.
 - `privacy.html` and `support.html`: the same text as `privacy.md` and
   `support.md` in bench-releases. If one changes, change the other.
 
 ## How it stays current
 
-- **Download buttons** link to
-  `releases/latest/download/Workbench.dmg`, which GitHub always points at the
-  newest release's disk image. They never need updating.
+- **Download buttons** are pointed at the newest release's disk image, in
+  whichever repo it is, once GitHub's list arrives. Until then, or if it
+  doesn't, they use the address in the page: bench-releases'
+  `releases/latest/download/Workbench.dmg`, which gives 0.10 build 68. That
+  updates itself to the newest version on first launch.
 - **Version history** loads from GitHub's API. Moving between pages reuses
   that list for up to 5 minutes, but a reload always asks GitHub again, and a
   tab Chrome or Safari restores from memory reloads if it's older than that.
@@ -44,5 +49,5 @@ cd website && python3 -m http.server 8787   # then open http://localhost:8787
   except where a shot is about the themes themselves.
 
 GitHub allows 60 API requests an hour per visitor's IP address. The site makes
-about one per visit and keeps the result for 5 minutes, so ordinary visitors
+two per visit (one per repo) and keeps the result for 5 minutes, so ordinary visitors
 never come near that limit.
