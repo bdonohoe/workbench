@@ -119,7 +119,7 @@ notarize:
 publish:
 	@NOTES="$(NOTES)" VERSION="$(VERSION)" scripts/publish.sh
 
-# Puts website/ live on GitHub Pages (bench-releases) without shipping a
+# Puts website/ live on GitHub Pages (the gh-pages branch) without shipping a
 # new version of the app. publish does this on its own.
 website:
 	@scripts/publish-website.sh
