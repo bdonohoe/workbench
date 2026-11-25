@@ -29,7 +29,7 @@ build: generate
 # support folder lands in the build folder, not the real one.
 test: generate
 	@mkdir -p $(DERIVED)
-	@TEST_RUNNER_BENCH_SUPPORT_DIR=$(abspath $(DERIVED))/test-support xcodebuild -project $(PROJECT) -scheme BenchTests -derivedDataPath $(DERIVED) -configuration Debug -destination 'platform=macOS' CLANG_COVERAGE_MAPPING=NO ENABLE_CODE_COVERAGE=NO test > $(DERIVED)/last-test.log 2>&1; status=$$?; \
+	@TEST_RUNNER_BENCH_SUPPORT_DIR=$(abspath $(DERIVED))/test-support xcodebuild -project $(PROJECT) -scheme BenchTests -derivedDataPath $(DERIVED) -configuration Debug -destination 'platform=macOS' CLANG_COVERAGE_MAPPING=NO ENABLE_CODE_COVERAGE=NO COMPILER_INDEX_STORE_ENABLE=NO test > $(DERIVED)/last-test.log 2>&1; status=$$?; \
 	grep -E "error:|Test run|􁁛|􀢄|TEST (SUCCEEDED|FAILED)" $(DERIVED)/last-test.log | sort -u | tail -40; \
 	exit $$status
 
