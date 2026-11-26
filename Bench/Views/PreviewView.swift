@@ -159,15 +159,111 @@ final class BrowserPage: NSObject, WKNavigationDelegate {
         webView.callAsyncJavaScript(script, arguments: arguments, in: nil, in: .page, completionHandler: nil)
     }
 
-    /// Selects the next (or previous) place the text appears on the page,
-    /// wrapping at the ends. Answers whether it appears at all.
-    func find(_ text: String, backwards: Bool = false) async -> Bool {
-        guard !text.isEmpty else { return false }
-        let configuration = WKFindConfiguration()
-        configuration.backwards = backwards
-        configuration.wraps = true
-        return (try? await webView.find(text, configuration: configuration).matchFound) ?? false
+    /// Where Find on Page stands: how many places the text appears, and
+    /// which of them is the one shown (counting from 0).
+    struct FindResult: Equatable {
+        var count = 0
+        var index = -1
     }
+
+    /// Marks every place the text appears on the page and scrolls to the
+    /// next (or previous) one, wrapping at the ends. An empty text clears
+    /// the marks.
+    ///
+    /// The page does this itself, with a script: WebKit's own find only
+    /// selects the match, and a selection doesn't show while the keys are
+    /// in the find bar and not the page.
+    func find(_ text: String, backwards: Bool = false) async -> FindResult {
+        await withCheckedContinuation { done in
+            webView.callAsyncJavaScript(Self.findScript, arguments: ["text": text, "backwards": backwards],
+                                        in: nil, in: Self.findWorld) { result in
+                var found = FindResult()
+                if case .success(let value) = result, let answer = value as? [String: Any] {
+                    found.count = answer["count"] as? Int ?? 0
+                    found.index = answer["index"] as? Int ?? -1
+                }
+                done.resume(returning: found)
+            }
+        }
+    }
+
+    func clearFind() {
+        webView.callAsyncJavaScript(Self.findScript, arguments: ["text": "", "backwards": false],
+                                    in: nil, in: Self.findWorld, completionHandler: nil)
+    }
+
+    /// The find script's own corner of the page, so its bookkeeping and
+    /// the page's scripts can't see each other.
+    private static let findWorld = WKContentWorld.world(name: "WorkbenchFind")
+
+    /// Finds `text` in the page's text and paints the matches with CSS
+    /// highlights, which change nothing in the page itself. It keeps the
+    /// matches between calls, so the same text again steps to the next.
+    /// A match has to sit inside one run of text: one that crosses a
+    /// change of style (half of it bold, say) isn't found.
+    private static let findScript = """
+        const state = window.__workbenchFind || (window.__workbenchFind = { text: null, ranges: [], index: -1 });
+        const none = { count: 0, index: -1 };
+        if (!window.CSS || !CSS.highlights || !document.body) { return none; }
+        const clear = () => {
+            CSS.highlights.delete('workbench-find');
+            CSS.highlights.delete('workbench-find-current');
+        };
+        if (!text) {
+            clear();
+            state.text = null; state.ranges = []; state.index = -1;
+            return none;
+        }
+        if (!state.sheet) {
+            state.sheet = new CSSStyleSheet();
+            state.sheet.replaceSync(
+                '::highlight(workbench-find) { background-color: rgba(255, 214, 10, 0.45); }' +
+                '::highlight(workbench-find-current) { background-color: rgb(255, 149, 0); color: black; }');
+            document.adoptedStyleSheets = [...document.adoptedStyleSheets, state.sheet];
+        }
+        const stale = state.ranges.some(range => !range.startContainer.isConnected);
+        if (text !== state.text || stale) {
+            const needle = text.toLowerCase();
+            const ranges = [];
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                acceptNode(node) {
+                    const parent = node.parentElement;
+                    if (!parent || parent.closest('script, style, noscript, template')) { return NodeFilter.FILTER_REJECT; }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            for (let node = walker.nextNode(); node && ranges.length < 2000; node = walker.nextNode()) {
+                const hay = node.data.toLowerCase();
+                // Lowercasing changes a few characters' length; skip those.
+                if (hay.length !== node.data.length) { continue; }
+                for (let at = hay.indexOf(needle); at !== -1 && ranges.length < 2000; at = hay.indexOf(needle, at + needle.length)) {
+                    const range = new Range();
+                    range.setStart(node, at);
+                    range.setEnd(node, at + needle.length);
+                    // Text that isn't drawn has no boxes.
+                    if (range.getClientRects().length) { ranges.push(range); }
+                }
+            }
+            state.text = text; state.ranges = ranges; state.index = -1;
+        }
+        const count = state.ranges.length;
+        if (!count) { clear(); return none; }
+        if (state.index < 0) {
+            state.index = backwards ? count - 1 : 0;
+        } else {
+            state.index = (state.index + (backwards ? -1 : 1) + count) % count;
+        }
+        const current = state.ranges[state.index];
+        CSS.highlights.set('workbench-find', new Highlight(...state.ranges));
+        const mark = new Highlight(current);
+        mark.priority = 1;
+        CSS.highlights.set('workbench-find-current', mark);
+        const box = current.getBoundingClientRect();
+        if (box.top < 0 || box.bottom > window.innerHeight || box.left < 0 || box.right > window.innerWidth) {
+            current.startContainer.parentElement.scrollIntoView({ block: 'center', inline: 'nearest' });
+        }
+        return { count: count, index: state.index };
+        """
 
     // MARK: WKNavigationDelegate
 
@@ -257,8 +353,9 @@ struct PreviewView: View {
     @State private var loads = 0
     @State private var finding = false
     @State private var findText = ""
-    /// False once a search has come up empty, until the text changes.
-    @State private var findFound = true
+    /// What the last search found. Nil until one is made, and again
+    /// when the text changes.
+    @State private var findResult: BrowserPage.FindResult?
     @FocusState private var findFocused: Bool
     /// True while the address is a text field. At rest it's a label, so
     /// the field can't pick up the keys just by being the only one around.
@@ -332,10 +429,11 @@ struct PreviewView: View {
                 .focused($findFocused)
                 .onSubmit { find(backwards: NSEvent.modifierFlags.contains(.shift)) }
                 .onExitCommand(perform: stopFinding)
-                .onChange(of: findText) { findFound = true }
-            if !findFound {
-                Text("Not found")
+                .onChange(of: findText) { findResult = nil }
+            if let findResult {
+                Text(findResult.count == 0 ? "Not found" : "\(findResult.index + 1) of \(findResult.count)")
                     .font(.ui(size: 11))
+                    .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
             button("chevron.up", help: "Previous match (⇧↩)", disabled: findText.isEmpty) { find(backwards: true) }
@@ -350,15 +448,17 @@ struct PreviewView: View {
 
     private func find(backwards: Bool) {
         let text = findText
+        guard !text.isEmpty else { return }
         Task {
             let found = await page.find(text, backwards: backwards)
-            if text == findText { findFound = found }
+            if text == findText, finding { findResult = found }
         }
     }
 
     private func stopFinding() {
         finding = false
-        findFound = true
+        findResult = nil
+        page.clearFind()
     }
 
     private func message(symbol: String, title: String, detail: String, @ViewBuilder action: () -> some View) -> some View {
