@@ -809,6 +809,31 @@ final class BandedTextView: NSTextView {
 
     required init?(coder: NSCoder) { fatalError("not used") }
 
+    /// ⌘F opens the find bar, and ⌘G and ⇧⌘G step through its matches,
+    /// while the keys are in this text or its find bar. Handled here and
+    /// not left to the Edit menu: before macOS 26 the menu SwiftUI builds
+    /// has no Find items, so nothing would send the text view the command.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let action = findAction(for: event), let scrollView = enclosingScrollView,
+           let focused = window?.firstResponder as? NSView, focused.isDescendant(of: scrollView) {
+            let sender = NSMenuItem()
+            sender.tag = action.rawValue
+            performTextFinderAction(sender)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    private func findAction(for event: NSEvent) -> NSTextFinder.Action? {
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        switch (event.charactersIgnoringModifiers?.lowercased(), modifiers) {
+        case ("f", .command): return .showFindInterface
+        case ("g", .command): return .nextMatch
+        case ("g", [.command, .shift]): return .previousMatch
+        default: return nil
+        }
+    }
+
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)
         guard let source else { return }
