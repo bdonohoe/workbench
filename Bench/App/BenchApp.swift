@@ -552,6 +552,9 @@ struct BenchCommands: Commands {
             Button("Close Tab") { actions.closeTab() }
                 .keyboardShortcut("w")
         }
+        CommandGroup(after: .textEditing) {
+            FindCommands(store: store, terminals: terminals, previews: previews)
+        }
         CommandGroup(after: .sidebar) {
             Button("Go to Project or Action…") {
                 guard !store.showsWelcome else { return }
@@ -657,6 +660,41 @@ private struct SizeCommands: View {
         }
         .keyboardShortcut("0")
         .disabled(page.map { previews.zoom(of: $0) == 1 } ?? (!showsChat || typography.isDefaultSize))
+    }
+}
+
+/// Edit > Find, for the page in the browser tab you're on, or else for
+/// whatever text has the keys (a file's find bar). Only before macOS 26:
+/// from 26 the system puts its own Find items in the Edit menu, and these
+/// would sit beside them as a second set.
+private struct FindCommands: View {
+    let store: AppStore
+    let terminals: TerminalManager
+    let previews: PreviewPages
+
+    var body: some View {
+        if #available(macOS 26, *) {
+            EmptyView()
+        } else {
+            Divider()
+            Button("Find…") { find(.show, .showFindInterface) }
+                .keyboardShortcut("f")
+            Button("Find Next") { find(.next, .nextMatch) }
+                .keyboardShortcut("g")
+            Button("Find Previous") { find(.previous, .previousMatch) }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+        }
+    }
+
+    private func find(_ step: PreviewPages.FindRequest.Step, _ action: NSTextFinder.Action) {
+        if let tab = AppActions(store: store, terminals: terminals).browserTab {
+            previews.find(step, in: tab.id)
+            return
+        }
+        // A text view reads which find command this is from its sender's tag.
+        let sender = NSMenuItem()
+        sender.tag = action.rawValue
+        NSApp.sendAction(#selector(NSResponder.performTextFinderAction(_:)), to: nil, from: sender)
     }
 }
 

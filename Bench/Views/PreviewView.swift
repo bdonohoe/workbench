@@ -16,6 +16,20 @@ final class PreviewPages {
     private var pages: [UUID: BrowserPage] = [:]
     private var zooms: [UUID: Double] = [:]
     private(set) var addressFocus: AddressFocus?
+    private(set) var findRequest: FindRequest?
+
+    /// A Find command from the menu, for a tab's page. The count makes
+    /// each one new, as for the address.
+    struct FindRequest: Equatable {
+        enum Step { case show, next, previous }
+        var tab: UUID
+        var step: Step
+        var count: Int
+    }
+
+    func find(_ step: FindRequest.Step, in tabID: UUID) {
+        findRequest = FindRequest(tab: tabID, step: step, count: (findRequest?.count ?? 0) + 1)
+    }
     /// Opens a page a link asked for in a tab of its own, after the tab
     /// the link was in. Set at launch.
     @ObservationIgnored var openInNewTab: ((URL, UUID) -> Void)?
@@ -374,6 +388,16 @@ struct PreviewView: View {
             address = shortAddress
             // An empty tab is waiting for an address.
             if currentURL == nil { editAddress() }
+        }
+        .onChange(of: previews.findRequest) { _, request in
+            guard let request, request.tab == tabID, currentURL != nil, failure == nil else { return }
+            // Next and Previous with nothing to look for open the bar.
+            if request.step == .show || !finding || findText.isEmpty {
+                finding = true
+                findFocused = true
+            } else {
+                find(backwards: request.step == .previous)
+            }
         }
         .onChange(of: previews.addressFocus) { _, request in
             if request?.tab == tabID { editAddress() }
